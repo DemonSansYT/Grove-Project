@@ -110,14 +110,15 @@
   }
   #debugPanel {
     position: fixed;
-    top: 150px;
-    left: 10px;
-    width: 320px;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px;
     max-width: calc(100vw - 20px);
-    max-height: 160px;
+    max-height: 130px;
     overflow-y: auto;
     color: #0f0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.7);
     padding: 8px 10px;
     border-radius: 8px;
     font-size: 10px;
@@ -127,12 +128,86 @@
     white-space: pre-wrap;
     pointer-events: none;
   }
+  #debugToggleBtn {
+    position: fixed;
+    top: 46px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 15px;
+    z-index: 16;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #debugToggleBtn.hasNew {
+    border-color: #ff4444;
+    box-shadow: 0 0 6px #ff4444;
+  }
+
+  /* --- Chat kutusu (sol üst) --- */
+  #chatBox {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    width: 260px;
+    max-width: calc(100vw - 20px);
+    z-index: 25;
+    display: none;
+    flex-direction: column;
+  }
+  #chatMessages {
+    max-height: 150px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.45);
+    border-radius: 8px 8px 0 0;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: #fff;
+  }
+  #chatMessages div { margin-bottom: 3px; line-height: 1.3; word-break: break-word; }
+  #chatMessages b { color: #7CFC00; }
+  #chatInputRow {
+    display: flex;
+    background: rgba(0,0,0,0.6);
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+  }
+  #chatInput {
+    flex: 1;
+    border: none;
+    background: rgba(255,255,255,0.9);
+    padding: 7px 8px;
+    font-size: 12px;
+    outline: none;
+  }
+  #chatSendBtn {
+    border: none;
+    background: #4CAF50;
+    color: #fff;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
 
-<div id="versionTag">v1.5</div>
+<div id="versionTag">v1.8</div>
+<button id="debugToggleBtn" title="Debug konsolu">🐞</button>
 <div id="debugPanel"></div>
+
+<div id="chatBox">
+  <div id="chatMessages"></div>
+  <div id="chatInputRow">
+    <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="120">
+    <button id="chatSendBtn">Gönder</button>
+  </div>
+</div>
 
 <div id="nameEntry">
   <h2>Grove Online - Prototip</h2>
@@ -156,7 +231,8 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import {
     getFirestore, doc, setDoc, deleteDoc, onSnapshot,
-    collection, serverTimestamp, Timestamp
+    collection, serverTimestamp, Timestamp,
+    addDoc, query, orderBy, limit
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -171,16 +247,23 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // --- DEBUG PANELİ: sorun tespiti için ekrana log basar ---
+  // --- DEBUG PANELİ: sorun tespiti için ekrana log basar (buton ile açılır/kapanır) ---
   const debugPanel = document.getElementById("debugPanel");
-  let debugVisible = false;
+  const debugToggleBtn = document.getElementById("debugToggleBtn");
+  let debugPanelOpen = false;
+
+  debugToggleBtn.addEventListener("click", () => {
+    debugPanelOpen = !debugPanelOpen;
+    debugPanel.style.display = debugPanelOpen ? "block" : "none";
+    debugToggleBtn.classList.remove("hasNew");
+  });
+
   function dlog(msg) {
-    debugVisible = true;
-    debugPanel.style.display = "block";
     const line = document.createElement("div");
     line.textContent = "[" + new Date().toLocaleTimeString() + "] " + msg;
     debugPanel.appendChild(line);
     debugPanel.scrollTop = debugPanel.scrollHeight;
+    if (!debugPanelOpen) debugToggleBtn.classList.add("hasNew");
     console.log(msg);
   }
   window.addEventListener("error", (e) => dlog("JS HATA: " + e.message));
@@ -193,6 +276,7 @@
   // THREE.JS SETUP
   // ---------------------------------------------------------
   import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+  import { FBXLoader } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js";
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
@@ -232,24 +316,9 @@
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // Basit ızgara çizgileri (yön hissi için)
+  // Basit ızgara çizgileri (şehir yüklenene kadar referans için)
   const grid = new THREE.GridHelper(200, 40, 0x555555, 0x2a2a2a);
   scene.add(grid);
-
-  // Birkaç referans kutusu (ileride bina/asset yerleşecek yerler)
-  function addBox(x, z, color, w = 4, h = 6, d = 4) {
-    const geo = new THREE.BoxGeometry(w, h, d);
-    const mat = new THREE.MeshStandardMaterial({ color });
-    const box = new THREE.Mesh(geo, mat);
-    box.position.set(x, h / 2, z);
-    box.castShadow = true;
-    box.receiveShadow = true;
-    scene.add(box);
-  }
-  addBox(-15, -10, 0xb08968);
-  addBox(15, -10, 0x8f9779);
-  addBox(-15, 10, 0xa47148);
-  addBox(15, 10, 0x7a8b6f);
 
   // ---------------------------------------------------------
   // OYUNCU (kendi karakterin) - şimdilik küp, sonra model gelecek
@@ -277,9 +346,98 @@
   const myMesh = createPlayerMesh(myColor);
   scene.add(myMesh);
 
+  // Karakterin gerçek boyu (body 1.6 + head 0.6 üst üste) - şehri buna göre ölçekleyeceğiz
+  const PLAYER_HEIGHT = 2.2;
+
+  // ---------------------------------------------------------
+  // ŞEHİR MODELİ YÜKLEME (assets/city/city.fbx)
+  // Ölçek, ortalama bina yüksekliği karakterin boyuna oranlanarak otomatik ayarlanır
+  // ---------------------------------------------------------
+  const loadingText = document.createElement("div");
+  loadingText.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;background:rgba(0,0,0,0.6);padding:14px 22px;border-radius:10px;font-size:15px;z-index:60;";
+  loadingText.textContent = "Şehir yükleniyor... 0%";
+  document.body.appendChild(loadingText);
+
+  const cityManager = new THREE.LoadingManager();
+  cityManager.setURLModifier((url) => {
+    try {
+      return encodeURI(decodeURI(url));
+    } catch (e) {
+      return encodeURI(url);
+    }
+  });
+
+  const fbxLoader = new FBXLoader(cityManager);
+  fbxLoader.setPath("assets/city/");
+  fbxLoader.setResourcePath("assets/city/textures/");
+
+  fbxLoader.load(
+    "city.fbx",
+    (object) => {
+      // Her mesh'in (bina/nesne) yüksekliğini ölç, medyan değeri "tipik bina yüksekliği" kabul et
+      const meshHeights = [];
+      object.traverse((child) => {
+        if (child.isMesh) {
+          const b = new THREE.Box3().setFromObject(child);
+          const s = new THREE.Vector3();
+          b.getSize(s);
+          if (s.y > 0.001) meshHeights.push(s.y);
+        }
+      });
+      meshHeights.sort((a, b) => a - b);
+      const medianHeight = meshHeights.length
+        ? meshHeights[Math.floor(meshHeights.length / 2)]
+        : 1;
+
+      // Ortalama bir bina, karakterin ~4 katı boyunda olsun (yaklaşık 2-3 katlı bina hissi)
+      const targetBuildingHeight = PLAYER_HEIGHT * 4;
+      const scaleFactor = medianHeight > 0 ? targetBuildingHeight / medianHeight : 1;
+      object.scale.setScalar(scaleFactor);
+
+      // Ölçeklemeden sonra tüm şehri ortala ve zemine (y=0) otur
+      const box = new THREE.Box3().setFromObject(object);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+      object.position.x -= center.x;
+      object.position.z -= center.z;
+      object.position.y -= box.min.y;
+
+      object.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      scene.add(object);
+      scene.remove(grid);
+      loadingText.remove();
+      dlog("Şehir yüklendi. Ölçek: " + scaleFactor.toFixed(3) + ", medyan bina yüksekliği (ham): " + medianHeight.toFixed(2));
+    },
+    (progress) => {
+      if (progress.total) {
+        const pct = Math.round((progress.loaded / progress.total) * 100);
+        loadingText.textContent = "Şehir yükleniyor... " + pct + "%";
+      }
+    },
+    (error) => {
+      dlog("ŞEHİR YÜKLEME HATASI: " + (error.message || error));
+      loadingText.textContent = "Şehir yüklenemedi, ızgara ile devam ediliyor.";
+      setTimeout(() => loadingText.remove(), 3000);
+    }
+  );
+
   const keys = {};
-  window.addEventListener("keydown", (e) => keys[e.code] = true);
-  window.addEventListener("keyup", (e) => keys[e.code] = false);
+  window.addEventListener("keydown", (e) => {
+    if (document.activeElement && document.activeElement.id === "chatInput") return;
+    keys[e.code] = true;
+  });
+  window.addEventListener("keyup", (e) => {
+    if (document.activeElement && document.activeElement.id === "chatInput") return;
+    keys[e.code] = false;
+  });
 
   // --- Mobil dokunmatik kontrol tespiti ---
   const isTouchDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
@@ -585,11 +743,60 @@
 
     document.getElementById("nameEntry").style.display = "none";
     document.getElementById("hud").style.display = "block";
+    document.getElementById("chatBox").style.display = "flex";
     document.getElementById("myName").textContent = myPlayerName;
     dlog("Katıldın: " + myPlayerName + " (ID: " + myPlayerId + ")");
 
     listenOtherPlayers();
+    listenChat();
     animate();
+  }
+
+  // ---------------------------------------------------------
+  // CHAT SİSTEMİ (Firestore üzerinden)
+  // ---------------------------------------------------------
+  const chatCol = collection(db, "rooms", ROOM_ID, "chat");
+  const chatMessagesEl = document.getElementById("chatMessages");
+  const chatInputEl = document.getElementById("chatInput");
+  const chatSendBtnEl = document.getElementById("chatSendBtn");
+
+  function sendChatMessage() {
+    const text = chatInputEl.value.trim();
+    if (!text || !myPlayerId) return;
+    chatInputEl.value = "";
+    addDoc(chatCol, {
+      name: myPlayerName,
+      text: text.slice(0, 120),
+      createdAt: serverTimestamp()
+    }).catch(err => dlog("CHAT YAZMA HATASI: " + err.code + " - " + err.message));
+  }
+
+  chatSendBtnEl.addEventListener("click", sendChatMessage);
+  chatInputEl.addEventListener("keydown", (e) => {
+    e.stopPropagation(); // oyun kontrollerine (WASD) sızmasın
+    if (e.key === "Enter") sendChatMessage();
+  });
+
+  function listenChat() {
+    const chatQuery = query(chatCol, orderBy("createdAt", "desc"), limit(30));
+    onSnapshot(chatQuery, (snapshot) => {
+      const msgs = [];
+      snapshot.forEach((docSnap) => msgs.push(docSnap.data()));
+      msgs.reverse(); // eskiden yeniye sırala
+
+      chatMessagesEl.innerHTML = "";
+      msgs.forEach((m) => {
+        const line = document.createElement("div");
+        const nameSpan = document.createElement("b");
+        nameSpan.textContent = (m.name || "Oyuncu") + ": ";
+        line.appendChild(nameSpan);
+        line.appendChild(document.createTextNode(m.text || ""));
+        chatMessagesEl.appendChild(line);
+      });
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }, (err) => {
+      dlog("CHAT DİNLEME HATASI: " + err.code + " - " + err.message);
+    });
   }
 
   // ---------------------------------------------------------
