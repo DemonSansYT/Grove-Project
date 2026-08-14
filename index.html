@@ -112,7 +112,7 @@
 </head>
 <body>
 
-<div id="versionTag">v1.1</div>
+<div id="versionTag">v1.2</div>
 
 <div id="nameEntry">
   <h2>Grove Online - Prototip</h2>
@@ -369,12 +369,29 @@
     dx += joyDx;
     dz += joyDz;
 
-    const len = Math.hypot(dx, dz);
-    if (len > 0) {
-      dx /= len; dz /= len;
-      myMesh.position.x += dx * moveSpeed * delta;
-      myMesh.position.z += dz * moveSpeed * delta;
-      myMesh.rotation.y = Math.atan2(dx, dz);
+    const inputLen = Math.hypot(dx, dz);
+    if (inputLen > 0) {
+      dx /= inputLen; dz /= inputLen;
+
+      // --- Kameraya göre hareket (camera-relative) ---
+      // Joystick "ileri" itildiğinde karakter kameranın baktığı yöne gitsin
+      const forwardX = -Math.sin(camYaw);
+      const forwardZ = -Math.cos(camYaw);
+      const rightX = Math.cos(camYaw);
+      const rightZ = -Math.sin(camYaw);
+
+      const forwardInput = -dz; // joystick ileri = dz negatif
+      const strafeInput = dx;
+
+      let moveX = forwardX * forwardInput + rightX * strafeInput;
+      let moveZ = forwardZ * forwardInput + rightZ * strafeInput;
+      const moveLen = Math.hypot(moveX, moveZ);
+      if (moveLen > 0) {
+        moveX /= moveLen; moveZ /= moveLen;
+        myMesh.position.x += moveX * moveSpeed * delta;
+        myMesh.position.z += moveZ * moveSpeed * delta;
+        myMesh.rotation.y = Math.atan2(moveX, moveZ);
+      }
     }
 
     if ((keys["Space"] || wantJump) && isGrounded) {
