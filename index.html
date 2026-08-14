@@ -110,26 +110,28 @@
   }
   #debugPanel {
     position: fixed;
-    bottom: 10px;
+    top: 150px;
     left: 10px;
-    right: 10px;
-    max-height: 140px;
+    width: 320px;
+    max-width: calc(100vw - 20px);
+    max-height: 160px;
     overflow-y: auto;
     color: #0f0;
-    background: rgba(0,0,0,0.75);
+    background: rgba(0,0,0,0.6);
     padding: 8px 10px;
     border-radius: 8px;
-    font-size: 11px;
+    font-size: 10px;
     font-family: monospace;
-    z-index: 50;
+    z-index: 15;
     display: none;
     white-space: pre-wrap;
+    pointer-events: none;
   }
 </style>
 </head>
 <body>
 
-<div id="versionTag">v1.3</div>
+<div id="versionTag">v1.5</div>
 <div id="debugPanel"></div>
 
 <div id="nameEntry">
@@ -154,7 +156,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import {
     getFirestore, doc, setDoc, deleteDoc, onSnapshot,
-    collection, serverTimestamp
+    collection, serverTimestamp, Timestamp
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -487,12 +489,41 @@
     onSnapshot(playersCol, (snapshot) => {
       dlog("Snapshot geldi, toplam doküman: " + snapshot.size);
       const activeIds = new Set();
+      const now = Date.now();
+      const STALE_MS = 6000; // 6 saniyedir güncelleme gelmiyorsa çevrimdışı say
+      const VERY_STALE_MS = 30000; // 30 saniyedir hiç güncelleme yoksa dokümanı sil
 
       snapshot.forEach((docSnap) => {
         const id = docSnap.id;
         if (id === myPlayerId) return; // kendimizi tekrar çizmeyelim
-        activeIds.add(id);
         const data = docSnap.data();
+
+        // Güncelleme zamanı kontrolü (hayalet/kopan oyuncuları temizlemek için)
+        let ageMs = 0;
+        if (data.updatedAt && typeof data.updatedAt.toMillis === "function") {
+          ageMs = now - data.updatedAt.toMillis();
+        }
+
+        if (ageMs > VERY_STALE_MS) {
+          // Uzun süredir hiç sinyal yok, dokümanı tamamen sil (herhangi bir istemci temizleyebilir)
+          deleteDoc(doc(playersCol, id)).catch(() => {});
+          if (otherPlayers[id]) {
+            scene.remove(otherPlayers[id].mesh);
+            delete otherPlayers[id];
+          }
+          return;
+        }
+
+        if (ageMs > STALE_MS) {
+          // Yakın zamanda sinyal yok, çevrimdışı say ama dokümanı hemen silme
+          if (otherPlayers[id]) {
+            scene.remove(otherPlayers[id].mesh);
+            delete otherPlayers[id];
+          }
+          return;
+        }
+
+        activeIds.add(id);
 
         if (!otherPlayers[id]) {
           const mesh = createPlayerMesh(data.color || 0xff0000);
