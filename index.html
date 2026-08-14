@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grove Online - Prototip</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #111;
+    font-family: Arial, sans-serif;
+  }
+  #hud {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: #fff;
+    background: rgba(0,0,0,0.5);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 10;
+    line-height: 1.5;
+  }
+  #hud b { color: #7CFC00; }
+  #nameEntry {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    flex-direction: column;
+    gap: 12px;
+  }
+  #nameEntry input {
+    padding: 10px 14px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+    width: 220px;
+    text-align: center;
+  }
+  #nameEntry button {
+    padding: 10px 24px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+  }
+  #nameEntry h2 { color: white; margin: 0; }
+  canvas { display: block; }
+
+  /* --- Mobil Joystick --- */
+  #joystickZone {
+    position: fixed;
+    left: 30px;
+    bottom: 30px;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.4);
+    z-index: 20;
+    touch-action: none;
+    display: none;
+  }
+  #joystickStick {
+    position: absolute;
+    left: 35px;
+    top: 35px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    pointer-events: none;
+  }
+  #jumpBtn {
+    position: fixed;
+    right: 30px;
+    bottom: 40px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    z-index: 20;
+    touch-action: none;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="nameEntry">
+  <h2>Grove Online - Prototip</h2>
+  <input type="text" id="playerNameInput" placeholder="İsmini yaz" maxlength="12">
+  <button id="joinBtn">Katıl</button>
+</div>
+
+<div id="hud" style="display:none;">
+  <div>Oyuncu: <b id="myName"></b></div>
+  <div>Online: <b id="playerCount">0</b></div>
+  <div style="opacity:0.7; margin-top:6px;" id="controlHint">WASD hareket, Boşluk zıpla</div>
+</div>
+
+<div id="joystickZone"><div id="joystickStick"></div></div>
+<button id="jumpBtn">ZIPLA</button>
+
+<script type="module">
+  // ---------------------------------------------------------
+  // FIREBASE SETUP (Firestore)
+  // ---------------------------------------------------------
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import {
+    getFirestore, doc, setDoc, deleteDoc, onSnapshot,
+    collection, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC5u1AIZmaKfXPrwaJMlJF7y09RJ1vdN9U",
+    authDomain: "grove-street-2c5c6.firebaseapp.com",
+    projectId: "grove-street-2c5c6",
+    storageBucket: "grove-street-2c5c6.firebasestorage.app",
+    messagingSenderId: "743102061127",
+    appId: "1:743102061127:web:9781e761b83c3263d2ef62"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const ROOM_ID = "prototype-room"; // ileride birden fazla oda/sahne olursa buradan değişir
+  const playersCol = collection(db, "rooms", ROOM_ID, "players");
+
+  // ---------------------------------------------------------
+  // THREE.JS SETUP
+  // ---------------------------------------------------------
+  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x87ceeb);
+  scene.fog = new THREE.Fog(0x87ceeb, 20, 80);
+
+  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Işıklandırma
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+  scene.add(hemiLight);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  sunLight.position.set(20, 30, 10);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(2048, 2048);
+  sunLight.shadow.camera.left = -40;
+  sunLight.shadow.camera.right = 40;
+  sunLight.shadow.camera.top = 40;
+  sunLight.shadow.camera.bottom = -40;
+  scene.add(sunLight);
+
+  // Zemin
+  const groundGeo = new THREE.PlaneGeometry(200, 200);
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // Basit ızgara çizgileri (yön hissi için)
+  const grid = new THREE.GridHelper(200, 40, 0x555555, 0x2a2a2a);
+  scene.add(grid);
+
+  // Birkaç referans kutusu (ileride bina/asset yerleşecek yerler)
+  function addBox(x, z, color, w = 4, h = 6, d = 4) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshStandardMaterial({ color });
+    const box = new THREE.Mesh(geo, mat);
+    box.position.set(x, h / 2, z);
+    box.castShadow = true;
+    box.receiveShadow = true;
+    scene.add(box);
+  }
+  addBox(-15, -10, 0xb08968);
+  addBox(15, -10, 0x8f9779);
+  addBox(-15, 10, 0xa47148);
+  addBox(15, 10, 0x7a8b6f);
+
+  // ---------------------------------------------------------
+  // OYUNCU (kendi karakterin) - şimdilik küp, sonra model gelecek
+  // ---------------------------------------------------------
+  function createPlayerMesh(color) {
+    const group = new THREE.Group();
+    const bodyGeo = new THREE.BoxGeometry(1, 1.6, 0.6);
+    const bodyMat = new THREE.MeshStandardMaterial({ color });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.8;
+    body.castShadow = true;
+    group.add(body);
+
+    const headGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = 1.9;
+    head.castShadow = true;
+    group.add(head);
+
+    return group;
+  }
+
+  const myColor = Math.floor(Math.random() * 0xffffff);
+  const myMesh = createPlayerMesh(myColor);
+  scene.add(myMesh);
+
+  const keys = {};
+  window.addEventListener("keydown", (e) => keys[e.code] = true);
+  window.addEventListener("keyup", (e) => keys[e.code] = false);
+
+  // --- Mobil dokunmatik kontrol tespiti ---
+  const isTouchDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+  if (isTouchDevice) {
+    document.getElementById("joystickZone").style.display = "block";
+    document.getElementById("jumpBtn").style.display = "block";
+    document.getElementById("controlHint").textContent = "Sol joystick hareket, sağ buton zıpla";
+  }
+
+  // --- Joystick mantığı ---
+  let joyDx = 0, joyDz = 0;
+  const joystickZone = document.getElementById("joystickZone");
+  const joystickStick = document.getElementById("joystickStick");
+  let joyActive = false;
+  let joyTouchId = null;
+  const JOY_RADIUS = 65;
+
+  function joyReset() {
+    joyDx = 0; joyDz = 0;
+    joystickStick.style.left = "35px";
+    joystickStick.style.top = "35px";
+  }
+
+  joystickZone.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    joyTouchId = t.identifier;
+    joyActive = true;
+  }, { passive: false });
+
+  window.addEventListener("touchmove", (e) => {
+    if (!joyActive) return;
+    for (const t of e.changedTouches) {
+      if (t.identifier !== joyTouchId) continue;
+      const rect = joystickZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let dx = t.clientX - cx;
+      let dy = t.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist > JOY_RADIUS) {
+        dx = (dx / dist) * JOY_RADIUS;
+        dy = (dy / dist) * JOY_RADIUS;
+      }
+      joystickStick.style.left = (35 + dx) + "px";
+      joystickStick.style.top = (35 + dy) + "px";
+      joyDx = dx / JOY_RADIUS;
+      joyDz = dy / JOY_RADIUS;
+    }
+  }, { passive: false });
+
+  window.addEventListener("touchend", (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyTouchId) {
+        joyActive = false;
+        joyTouchId = null;
+        joyReset();
+      }
+    }
+  });
+
+  // --- Zıplama butonu ---
+  let wantJump = false;
+  const jumpBtn = document.getElementById("jumpBtn");
+  jumpBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    wantJump = true;
+  }, { passive: false });
+
+  let velocityY = 0;
+  let isGrounded = true;
+  const moveSpeed = 8;
+  const jumpForce = 8;
+  const gravity = -20;
+
+  function updateLocalPlayer(delta) {
+    let dx = 0, dz = 0;
+    if (keys["KeyW"]) dz -= 1;
+    if (keys["KeyS"]) dz += 1;
+    if (keys["KeyA"]) dx -= 1;
+    if (keys["KeyD"]) dx += 1;
+
+    // Joystick girdisini de ekle (klavye + joystick aynı anda çalışabilir)
+    dx += joyDx;
+    dz += joyDz;
+
+    const len = Math.hypot(dx, dz);
+    if (len > 0) {
+      dx /= len; dz /= len;
+      myMesh.position.x += dx * moveSpeed * delta;
+      myMesh.position.z += dz * moveSpeed * delta;
+      myMesh.rotation.y = Math.atan2(dx, dz);
+    }
+
+    if ((keys["Space"] || wantJump) && isGrounded) {
+      velocityY = jumpForce;
+      isGrounded = false;
+    }
+    wantJump = false;
+
+    velocityY += gravity * delta;
+    myMesh.position.y += velocityY * delta;
+    if (myMesh.position.y <= 0) {
+      myMesh.position.y = 0;
+      velocityY = 0;
+      isGrounded = true;
+    }
+
+    // Kamera oyuncunun arkasında takip etsin
+    const camOffset = new THREE.Vector3(0, 4, 7);
+    const targetCamPos = myMesh.position.clone().add(camOffset);
+    camera.position.lerp(targetCamPos, 0.1);
+    camera.lookAt(myMesh.position.clone().add(new THREE.Vector3(0, 1, 0)));
+  }
+
+  // ---------------------------------------------------------
+  // ÇOKLU OYUNCU SENKRON (Firestore)
+  // ---------------------------------------------------------
+  let myPlayerId = null;
+  let myPlayerName = "Oyuncu";
+  const otherPlayers = {}; // id -> { mesh, targetPos, targetRotY, lastUpdate }
+
+  let lastSentTime = 0;
+  const SEND_INTERVAL = 100; // ms - saniyede ~10 update
+
+  function sendMyPosition() {
+    if (!myPlayerId) return;
+    const now = performance.now();
+    if (now - lastSentTime < SEND_INTERVAL) return;
+    lastSentTime = now;
+
+    setDoc(doc(playersCol, myPlayerId), {
+      name: myPlayerName,
+      color: myColor,
+      x: myMesh.position.x,
+      y: myMesh.position.y,
+      z: myMesh.position.z,
+      rotY: myMesh.rotation.y,
+      updatedAt: serverTimestamp()
+    }, { merge: true }).catch(err => console.error("Firestore yazma hatası:", err));
+  }
+
+  function listenOtherPlayers() {
+    onSnapshot(playersCol, (snapshot) => {
+      const activeIds = new Set();
+
+      snapshot.forEach((docSnap) => {
+        const id = docSnap.id;
+        if (id === myPlayerId) return; // kendimizi tekrar çizmeyelim
+        activeIds.add(id);
+        const data = docSnap.data();
+
+        if (!otherPlayers[id]) {
+          const mesh = createPlayerMesh(data.color || 0xff0000);
+          scene.add(mesh);
+          otherPlayers[id] = {
+            mesh,
+            targetPos: new THREE.Vector3(data.x, data.y, data.z),
+            targetRotY: data.rotY || 0
+          };
+        } else {
+          otherPlayers[id].targetPos.set(data.x, data.y, data.z);
+          otherPlayers[id].targetRotY = data.rotY || 0;
+        }
+      });
+
+      // Ayrılan oyuncuları temizle
+      for (const id in otherPlayers) {
+        if (!activeIds.has(id)) {
+          scene.remove(otherPlayers[id].mesh);
+          delete otherPlayers[id];
+        }
+      }
+
+      document.getElementById("playerCount").textContent = activeIds.size + 1;
+    }, (err) => {
+      console.error("Firestore dinleme hatası:", err);
+    });
+  }
+
+  function updateOtherPlayers(delta) {
+    for (const id in otherPlayers) {
+      const p = otherPlayers[id];
+      // Yumuşak geçiş (interpolation) - ışınlanma hissini önler
+      p.mesh.position.lerp(p.targetPos, 0.15);
+      p.mesh.rotation.y += (p.targetRotY - p.mesh.rotation.y) * 0.15;
+    }
+  }
+
+  // Sekme kapanınca kendi kaydımızı silelim
+  window.addEventListener("beforeunload", () => {
+    if (myPlayerId) {
+      // beforeunload içinde async garanti çalışmayabilir ama deneriz
+      deleteDoc(doc(playersCol, myPlayerId));
+    }
+  });
+
+  // ---------------------------------------------------------
+  // OYUNA KATILMA EKRANI
+  // ---------------------------------------------------------
+  document.getElementById("joinBtn").addEventListener("click", startGame);
+  document.getElementById("playerNameInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") startGame();
+  });
+
+  function startGame() {
+    const nameInput = document.getElementById("playerNameInput");
+    myPlayerName = (nameInput.value || "Oyuncu").trim().slice(0, 12) || "Oyuncu";
+    myPlayerId = "p_" + Math.random().toString(36).slice(2, 10);
+
+    document.getElementById("nameEntry").style.display = "none";
+    document.getElementById("hud").style.display = "block";
+    document.getElementById("myName").textContent = myPlayerName;
+
+    listenOtherPlayers();
+    animate();
+  }
+
+  // ---------------------------------------------------------
+  // ANA DÖNGÜ
+  // ---------------------------------------------------------
+  const clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    const delta = Math.min(clock.getDelta(), 0.1);
+
+    updateLocalPlayer(delta);
+    updateOtherPlayers(delta);
+    sendMyPosition();
+
+    renderer.render(scene, camera);
+  }
+</script>
+</body>
+</html>
