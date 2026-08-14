@@ -297,8 +297,46 @@
   const jumpBtn = document.getElementById("jumpBtn");
   jumpBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
+    e.stopPropagation(); // kamera sürükleme alanına sızmasın
     wantJump = true;
   }, { passive: false });
+
+  // --- Kamera döndürme (sağ taraftan sürükle) ---
+  let camYaw = 0;
+  let camPitch = 0.35; // radyan, yukarı/aşağı bakış açısı
+  let camTouchId = null;
+  let lastCamX = 0, lastCamY = 0;
+
+  window.addEventListener("touchstart", (e) => {
+    for (const t of e.changedTouches) {
+      if (camTouchId !== null) continue;
+      // Joystick veya zıplama butonu üzerindeyse kamera kontrolüne alma
+      if (joystickZone.contains(t.target) || jumpBtn.contains(t.target)) continue;
+      // Sadece ekranın sağ yarısı kamera için
+      if (t.clientX < window.innerWidth / 2) continue;
+      camTouchId = t.identifier;
+      lastCamX = t.clientX;
+      lastCamY = t.clientY;
+    }
+  }, { passive: true });
+
+  window.addEventListener("touchmove", (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier !== camTouchId) continue;
+      const dx = t.clientX - lastCamX;
+      const dy = t.clientY - lastCamY;
+      lastCamX = t.clientX;
+      lastCamY = t.clientY;
+      camYaw -= dx * 0.006;
+      camPitch = Math.max(0.05, Math.min(1.1, camPitch + dy * 0.004));
+    }
+  }, { passive: true });
+
+  window.addEventListener("touchend", (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === camTouchId) camTouchId = null;
+    }
+  });
 
   let velocityY = 0;
   let isGrounded = true;
@@ -339,10 +377,17 @@
       isGrounded = true;
     }
 
-    // Kamera oyuncunun arkasında takip etsin
-    const camOffset = new THREE.Vector3(0, 4, 7);
+    // Kamera oyuncunun etrafında yörüngesel takip etsin (sağdan swipe ile döner)
+    const dist = 7;
+    const horizDist = dist * Math.cos(camPitch);
+    const height = dist * Math.sin(camPitch) + 1.5;
+    const camOffset = new THREE.Vector3(
+      horizDist * Math.sin(camYaw),
+      height,
+      horizDist * Math.cos(camYaw)
+    );
     const targetCamPos = myMesh.position.clone().add(camOffset);
-    camera.position.lerp(targetCamPos, 0.1);
+    camera.position.lerp(targetCamPos, 0.15);
     camera.lookAt(myMesh.position.clone().add(new THREE.Vector3(0, 1, 0)));
   }
 
