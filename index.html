@@ -108,11 +108,29 @@
     font-family: monospace;
     z-index: 10;
   }
+  #debugPanel {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    max-height: 140px;
+    overflow-y: auto;
+    color: #0f0;
+    background: rgba(0,0,0,0.75);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-family: monospace;
+    z-index: 50;
+    display: none;
+    white-space: pre-wrap;
+  }
 </style>
 </head>
 <body>
 
-<div id="versionTag">v1.2</div>
+<div id="versionTag">v1.3</div>
+<div id="debugPanel"></div>
 
 <div id="nameEntry">
   <h2>Grove Online - Prototip</h2>
@@ -150,6 +168,21 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+
+  // --- DEBUG PANELİ: sorun tespiti için ekrana log basar ---
+  const debugPanel = document.getElementById("debugPanel");
+  let debugVisible = false;
+  function dlog(msg) {
+    debugVisible = true;
+    debugPanel.style.display = "block";
+    const line = document.createElement("div");
+    line.textContent = "[" + new Date().toLocaleTimeString() + "] " + msg;
+    debugPanel.appendChild(line);
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+    console.log(msg);
+  }
+  window.addEventListener("error", (e) => dlog("JS HATA: " + e.message));
+  dlog("Firebase başlatıldı, projectId=" + firebaseConfig.projectId);
 
   const ROOM_ID = "prototype-room"; // ileride birden fazla oda/sahne olursa buradan değişir
   const playersCol = collection(db, "rooms", ROOM_ID, "players");
@@ -446,11 +479,13 @@
       z: myMesh.position.z,
       rotY: myMesh.rotation.y,
       updatedAt: serverTimestamp()
-    }, { merge: true }).catch(err => console.error("Firestore yazma hatası:", err));
+    }, { merge: true }).catch(err => dlog("YAZMA HATASI: " + err.code + " - " + err.message));
   }
 
   function listenOtherPlayers() {
+    dlog("Firestore dinleme başlatılıyor, oda=" + ROOM_ID + ", benim ID=" + myPlayerId);
     onSnapshot(playersCol, (snapshot) => {
+      dlog("Snapshot geldi, toplam doküman: " + snapshot.size);
       const activeIds = new Set();
 
       snapshot.forEach((docSnap) => {
@@ -483,7 +518,7 @@
 
       document.getElementById("playerCount").textContent = activeIds.size + 1;
     }, (err) => {
-      console.error("Firestore dinleme hatası:", err);
+      dlog("DİNLEME HATASI: " + err.code + " - " + err.message);
     });
   }
 
@@ -520,6 +555,7 @@
     document.getElementById("nameEntry").style.display = "none";
     document.getElementById("hud").style.display = "block";
     document.getElementById("myName").textContent = myPlayerName;
+    dlog("Katıldın: " + myPlayerName + " (ID: " + myPlayerId + ")");
 
     listenOtherPlayers();
     animate();
