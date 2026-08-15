@@ -152,7 +152,7 @@
   /* --- Chat kutusu (sol üst) --- */
   #chatBox {
     position: fixed;
-    top: 150px;
+    top: 195px;
     left: 10px;
     width: 260px;
     max-width: calc(100vw - 20px);
@@ -197,7 +197,7 @@
 </head>
 <body>
 
-<div id="versionTag">v2.0</div>
+<div id="versionTag">v2.1</div>
 <button id="debugToggleBtn" title="Debug konsolu">🐞</button>
 <div id="debugPanel"></div>
 
@@ -841,6 +841,7 @@
 
     return group;
   }
+  const BLOCKS = 5; // 5x5 blok şehir
   const BLOCK_SIZE = FLOOR_HEIGHT * 7; // her blok kabaca bir binanın 7 katı genişliğinde
   const ROAD_WIDTH = PLAYER_HEIGHT * 3.5;
   const SIDEWALK_WIDTH = PLAYER_HEIGHT * 0.6;
