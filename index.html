@@ -157,6 +157,53 @@
     color: white;
     cursor: pointer;
   }
+  #characterSelect {
+    display: flex;
+    gap: 14px;
+  }
+  .charOption {
+    width: 96px;
+    padding: 14px 8px;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .charOption .charIcon { font-size: 34px; }
+  .charOption.selected {
+    border-color: #4CAF50;
+    background: rgba(76,175,80,0.25);
+  }
+  #leashControl {
+    position: fixed;
+    top: 130px;
+    left: 10px;
+    z-index: 10;
+    color: #fff;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  #leashControl button {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: #4CAF50;
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+  }
 
   /* --- Mobil Joystick --- */
   #joystickZone {
@@ -216,8 +263,16 @@
 
 <div id="nameEntry">
   <h2>Grove Online - Prototip</h2>
+  <div id="characterSelect">
+    <div class="charOption selected" data-type="human"><span class="charIcon">🧍</span>İnsan</div>
+    <div class="charOption" data-type="dog"><span class="charIcon">🐕</span>Köpek</div>
+  </div>
   <input type="text" id="playerNameInput" placeholder="İsmini yaz" maxlength="12">
   <button id="joinBtn">Katıl</button>
+</div>
+
+<div id="leashControl">
+  🦮 Tasma: <button id="leashMinus">-</button> <span id="leashValue">4</span>m <button id="leashPlus">+</button>
 </div>
 
 <div id="hud" style="display:none;">
@@ -312,17 +367,194 @@
   sunLight.shadow.camera.bottom = -40;
   scene.add(sunLight);
 
-  // Basit zemin
+  // Zemin (yolların altındaki/dışındaki genel toprak/çim alanı)
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
-    new THREE.MeshStandardMaterial({ color: 0x3a3a3a })
+    new THREE.PlaneGeometry(400, 400),
+    new THREE.MeshStandardMaterial({ color: 0x5a6b4a })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const grid = new THREE.GridHelper(200, 40, 0x555555, 0x2a2a2a);
-  scene.add(grid);
+  // ---------------------------------------------------------
+  // ORGANİK YOL AĞI ÜRETİMİ
+  // Izgara düğümleri arasında rastgele (ama bağlantılı) kenarlarla "karışık" bir
+  // sokak ağı kuruyoruz: çıkmaz sokaklar, dönüşler, bazı döngüler (loop) oluşuyor.
+  // Şehrin kenarları asfaltın aniden kesilmesi yerine kaldırımlı çıkmaz sokaklarla yumuşak bitiyor.
+  // ---------------------------------------------------------
+  const PLAYER_HEIGHT = 2.2;
+  const ROAD_WIDTH = PLAYER_HEIGHT * 3.2;      // ~7
+  const SIDEWALK_WIDTH = PLAYER_HEIGHT * 0.75; // ~1.65
+  const CURB_HEIGHT = 0.18;
+  const NODE_SPACING = ROAD_WIDTH + 14;        // düğümler arası mesafe
+  const GRID_N = 6;                            // 6x6 düğüm ızgarası - küçük şehir
+
+  const cityGroup = new THREE.Group();
+  scene.add(cityGroup);
+
+  const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2e });
+  const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x9a9a92 });
+  const dashMat = new THREE.MeshStandardMaterial({ color: 0xe8e0c0 });
+
+  const gridOffset = -(GRID_N - 1) * NODE_SPACING / 2;
+  function nodeWorldX(gx) { return gridOffset + gx * NODE_SPACING; }
+  function nodeWorldZ(gz) { return gridOffset + gz * NODE_SPACING; }
+
+  // Bir yol segmenti (asfalt + iki yanda yükseltilmiş kaldırım + beyaz kesikli orta çizgi) çizer.
+  // x1,z1 -> x2,z2 sadece X ya da sadece Z ekseninde değişebilir (eksene hizalı).
+  function addStraightRoad(x1, z1, x2, z2) {
+    const horizontal = z1 === z2;
+    const midX = (x1 + x2) / 2, midZ = (z1 + z2) / 2;
+    const len = horizontal ? Math.abs(x2 - x1) : Math.abs(z2 - z1);
+    if (len < 0.01) return;
+
+    // Asfalt
+    const asphalt = new THREE.Mesh(
+      new THREE.PlaneGeometry(horizontal ? len : ROAD_WIDTH, horizontal ? ROAD_WIDTH : len),
+      asphaltMat
+    );
+    asphalt.rotation.x = -Math.PI / 2;
+    asphalt.position.set(midX, 0.02, midZ);
+    asphalt.receiveShadow = true;
+    cityGroup.add(asphalt);
+
+    // Kaldırımlar (asfalttan biraz yüksekte, iki kenarda) - köşelerde birleşsin diye biraz uzatılmış
+    const swLen = len + SIDEWALK_WIDTH;
+    const offset = ROAD_WIDTH / 2 + SIDEWALK_WIDTH / 2;
+    [-1, 1].forEach((side) => {
+      const geo = new THREE.BoxGeometry(
+        horizontal ? swLen : SIDEWALK_WIDTH,
+        CURB_HEIGHT,
+        horizontal ? SIDEWALK_WIDTH : swLen
+      );
+      const sw = new THREE.Mesh(geo, sidewalkMat);
+      if (horizontal) sw.position.set(midX, CURB_HEIGHT / 2 + 0.02, midZ + side * offset);
+      else sw.position.set(midX + side * offset, CURB_HEIGHT / 2 + 0.02, midZ);
+      sw.receiveShadow = true;
+      sw.castShadow = true;
+      cityGroup.add(sw);
+    });
+
+    // Beyaz kesikli orta çizgi - GERÇEK GEOMETRİ, doku değil
+    const dashLen = 1.6, gapLen = 1.4, dashW = 0.18;
+    const totalDash = dashLen + gapLen;
+    const count = Math.floor(len / totalDash);
+    for (let i = 0; i < count; i++) {
+      const t = -len / 2 + totalDash * i + dashLen / 2 + (len - count * totalDash) / 2;
+      const dash = new THREE.Mesh(
+        new THREE.BoxGeometry(horizontal ? dashLen : dashW, 0.02, horizontal ? dashW : dashLen),
+        dashMat
+      );
+      dash.position.set(midX + (horizontal ? t : 0), 0.035, midZ + (horizontal ? 0 : t));
+      cityGroup.add(dash);
+    }
+  }
+
+  // Çıkmaz sokak ucu: kısa bir "kütük" yol uzantısı + ucuna kapatan kaldırım
+  function addDeadEndCap(nx, nz, dirX, dirZ) {
+    const stubLen = ROAD_WIDTH * 0.6;
+    const tipX = nx + dirX * stubLen, tipZ = nz + dirZ * stubLen;
+    addStraightRoad(nx, nz, tipX, tipZ);
+
+    const capGeo = new THREE.BoxGeometry(
+      dirX !== 0 ? SIDEWALK_WIDTH : ROAD_WIDTH + SIDEWALK_WIDTH * 2,
+      CURB_HEIGHT,
+      dirX !== 0 ? ROAD_WIDTH + SIDEWALK_WIDTH * 2 : SIDEWALK_WIDTH
+    );
+    const cap = new THREE.Mesh(capGeo, sidewalkMat);
+    cap.position.set(tipX + dirX * (SIDEWALK_WIDTH / 2), CURB_HEIGHT / 2 + 0.02, tipZ + dirZ * (SIDEWALK_WIDTH / 2));
+    cap.receiveShadow = true;
+    cityGroup.add(cap);
+  }
+
+  // --- Izgara düğümlerini rastgele (ama tamamen bağlantılı) bir ağaç + birkaç döngü ile bağla ---
+  function keyOf(gx, gz) { return gx + "_" + gz; }
+
+  const visited = [];
+  for (let gx = 0; gx < GRID_N; gx++) { visited.push(new Array(GRID_N).fill(false)); }
+
+  const centerGX = Math.floor(GRID_N / 2), centerGZ = Math.floor(GRID_N / 2);
+  visited[centerGX][centerGZ] = true;
+
+  let frontier = [];
+  function addFrontier(gx, gz) {
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dz]) => {
+      const nx = gx + dx, nz = gz + dz;
+      if (nx >= 0 && nx < GRID_N && nz >= 0 && nz < GRID_N && !visited[nx][nz]) {
+        frontier.push([gx, gz, nx, nz]);
+      }
+    });
+  }
+  addFrontier(centerGX, centerGZ);
+
+  const acceptedEdges = [];
+  while (frontier.length) {
+    const idx = Math.floor(Math.random() * frontier.length);
+    const [ax, az, bx, bz] = frontier.splice(idx, 1)[0];
+    if (visited[bx][bz]) continue;
+    visited[bx][bz] = true;
+    acceptedEdges.push([ax, az, bx, bz]);
+    addFrontier(bx, bz);
+  }
+
+  // Ekstra döngü kenarları (bazı komşu düğümleri de bağla ki sadece çıkmaz sokak olmasın)
+  const edgeSet = new Set();
+  acceptedEdges.forEach(([ax, az, bx, bz]) => {
+    const a = ax + "," + az, b = bx + "," + bz;
+    edgeSet.add(a < b ? a + "-" + b : b + "-" + a);
+  });
+  const LOOP_CHANCE = 0.2;
+  for (let gx = 0; gx < GRID_N; gx++) {
+    for (let gz = 0; gz < GRID_N; gz++) {
+      if (gx + 1 < GRID_N) {
+        const a = gx + "," + gz, b = (gx + 1) + "," + gz;
+        const k = a < b ? a + "-" + b : b + "-" + a;
+        if (!edgeSet.has(k) && Math.random() < LOOP_CHANCE) {
+          edgeSet.add(k);
+          acceptedEdges.push([gx, gz, gx + 1, gz]);
+        }
+      }
+      if (gz + 1 < GRID_N) {
+        const a = gx + "," + gz, b = gx + "," + (gz + 1);
+        const k = a < b ? a + "-" + b : b + "-" + a;
+        if (!edgeSet.has(k) && Math.random() < LOOP_CHANCE) {
+          edgeSet.add(k);
+          acceptedEdges.push([gx, gz, gx, gz + 1]);
+        }
+      }
+    }
+  }
+
+  // Dereceleri ve komşuluk listesini çıkar (çıkmaz sokakları bulmak için)
+  const degree = {};
+  const adjList = {};
+  acceptedEdges.forEach(([ax, az, bx, bz]) => {
+    const ka = keyOf(ax, az), kb = keyOf(bx, bz);
+    degree[ka] = (degree[ka] || 0) + 1;
+    degree[kb] = (degree[kb] || 0) + 1;
+    (adjList[ka] = adjList[ka] || []).push([bx, bz]);
+    (adjList[kb] = adjList[kb] || []).push([ax, az]);
+  });
+
+  // Geometriyi inşa et
+  acceptedEdges.forEach(([ax, az, bx, bz]) => {
+    addStraightRoad(nodeWorldX(ax), nodeWorldZ(az), nodeWorldX(bx), nodeWorldZ(bz));
+  });
+
+  // Çıkmaz sokakları (derece=1) kaldırımla kapat - şehir sınırı "yumuşak" bitsin
+  for (let gx = 0; gx < GRID_N; gx++) {
+    for (let gz = 0; gz < GRID_N; gz++) {
+      const k = keyOf(gx, gz);
+      if ((degree[k] || 0) === 1) {
+        const [nx2, nz2] = adjList[k][0];
+        const dirX = Math.sign(gx - nx2), dirZ = Math.sign(gz - nz2);
+        addDeadEndCap(nodeWorldX(gx), nodeWorldZ(gz), dirX, dirZ);
+      }
+    }
+  }
+
+  const spawnX = nodeWorldX(centerGX), spawnZ = nodeWorldZ(centerGZ);
+  dlog("Yol ağı üretildi: " + GRID_N + "x" + GRID_N + " düğüm, " + acceptedEdges.length + " yol segmenti");
 
   // ---------------------------------------------------------
   // OYUNCU (kendi karakterin)
@@ -348,8 +580,54 @@
     return group;
   }
 
+  function createDogMesh(color) {
+    const group = new THREE.Group();
+    const furColor = color || 0x8a5a3a;
+    const furMat = new THREE.MeshStandardMaterial({ color: furColor });
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.5), furMat);
+    body.position.y = 0.4;
+    body.castShadow = true;
+    group.add(body);
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), furMat);
+    head.position.set(0.65, 0.55, 0);
+    head.castShadow = true;
+    group.add(head);
+
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.18, 0.2), new THREE.MeshStandardMaterial({ color: 0x2e2018 }));
+    snout.position.set(0.9, 0.48, 0);
+    group.add(snout);
+
+    [-0.14, 0.14].forEach((oz) => {
+      const ear = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.08), furMat);
+      ear.position.set(0.68, 0.78, oz * 1.5);
+      ear.rotation.z = oz > 0 ? 0.35 : -0.35;
+      group.add(ear);
+    });
+
+    [[-0.4, -0.2], [-0.4, 0.2], [0.4, -0.2], [0.4, 0.2]].forEach(([lx, lz]) => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.4, 6), furMat);
+      leg.position.set(lx, 0.2, lz);
+      leg.castShadow = true;
+      group.add(leg);
+    });
+
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.03, 0.5, 6), furMat);
+    tail.position.set(-0.62, 0.55, 0);
+    tail.rotation.z = Math.PI / 3.2;
+    group.add(tail);
+
+    return group;
+  }
+
+  function createCharacterMesh(type, color) {
+    return type === "dog" ? createDogMesh(color) : createPlayerMesh(color);
+  }
+
   const myColor = Math.floor(Math.random() * 0xffffff);
-  const myMesh = createPlayerMesh(myColor);
+  let myPlayerType = "human";
+  let myMesh = createPlayerMesh(myColor);
   scene.add(myMesh);
 
   // ---------------------------------------------------------
@@ -538,6 +816,67 @@
   let myPlayerName = "Oyuncu";
   const otherPlayers = {};
 
+  // --- Tasma sistemi ---
+  let myLeashLength = 4;
+  const leashValueEl = document.getElementById("leashValue");
+  document.getElementById("leashMinus").addEventListener("click", () => {
+    myLeashLength = Math.max(2, myLeashLength - 0.5);
+    leashValueEl.textContent = myLeashLength;
+  });
+  document.getElementById("leashPlus").addEventListener("click", () => {
+    myLeashLength = Math.min(10, myLeashLength + 0.5);
+    leashValueEl.textContent = myLeashLength;
+  });
+
+  // Tasma çizgisi (insan-köpek arasında görsel bağ)
+  const leashLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  const leashLineMat = new THREE.LineBasicMaterial({ color: 0x5a3a24 });
+  const leashLine = new THREE.Line(leashLineGeo, leashLineMat);
+  leashLine.visible = false;
+  scene.add(leashLine);
+
+  function findNearestOfType(type) {
+    let nearest = null, nearestDist = Infinity;
+    for (const id in otherPlayers) {
+      const p = otherPlayers[id];
+      if (p.type !== type) continue;
+      const d = myMesh.position.distanceTo(p.mesh.position);
+      if (d < nearestDist) { nearestDist = d; nearest = p; }
+    }
+    return nearest;
+  }
+
+  function updateLeash() {
+    if (myPlayerType === "dog") {
+      const owner = findNearestOfType("human");
+      if (owner) {
+        const leashLen = owner.leashLength || 4;
+        const dx = myMesh.position.x - owner.mesh.position.x;
+        const dz = myMesh.position.z - owner.mesh.position.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > leashLen) {
+          const scale = leashLen / dist;
+          myMesh.position.x = owner.mesh.position.x + dx * scale;
+          myMesh.position.z = owner.mesh.position.z + dz * scale;
+        }
+        leashLine.visible = true;
+        const pts = [myMesh.position.clone().add(new THREE.Vector3(0, 0.5, 0)), owner.mesh.position.clone().add(new THREE.Vector3(0, 1.2, 0))];
+        leashLine.geometry.setFromPoints(pts);
+      } else {
+        leashLine.visible = false;
+      }
+    } else if (myPlayerType === "human") {
+      const pet = findNearestOfType("dog");
+      if (pet) {
+        leashLine.visible = true;
+        const pts = [myMesh.position.clone().add(new THREE.Vector3(0, 1.2, 0)), pet.mesh.position.clone().add(new THREE.Vector3(0, 0.5, 0))];
+        leashLine.geometry.setFromPoints(pts);
+      } else {
+        leashLine.visible = false;
+      }
+    }
+  }
+
   let lastSentTime = 0;
   const SEND_INTERVAL = 100;
 
@@ -550,6 +889,8 @@
     setDoc(doc(playersCol, myPlayerId), {
       name: myPlayerName,
       color: myColor,
+      type: myPlayerType,
+      leashLength: myLeashLength,
       x: myMesh.position.x,
       y: myMesh.position.y,
       z: myMesh.position.z,
@@ -596,14 +937,18 @@
         activeIds.add(id);
 
         if (!otherPlayers[id]) {
-          const mesh = createPlayerMesh(data.color || 0xff0000);
+          const mesh = createCharacterMesh(data.type || "human", data.color || 0xff0000);
           scene.add(mesh);
           otherPlayers[id] = {
             mesh,
+            type: data.type || "human",
+            leashLength: data.leashLength || 4,
             targetPos: new THREE.Vector3(data.x, data.y, data.z),
             targetRotY: data.rotY || 0
           };
         } else {
+          otherPlayers[id].type = data.type || "human";
+          otherPlayers[id].leashLength = data.leashLength || 4;
           otherPlayers[id].targetPos.set(data.x, data.y, data.z);
           otherPlayers[id].targetRotY = data.rotY || 0;
         }
@@ -683,6 +1028,17 @@
   }
 
   // ---------------------------------------------------------
+  // KARAKTER SEÇİMİ (İnsan / Köpek)
+  // ---------------------------------------------------------
+  document.querySelectorAll(".charOption").forEach((el) => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".charOption").forEach((o) => o.classList.remove("selected"));
+      el.classList.add("selected");
+      myPlayerType = el.dataset.type;
+    });
+  });
+
+  // ---------------------------------------------------------
   // OYUNA KATILMA EKRANI
   // ---------------------------------------------------------
   document.getElementById("joinBtn").addEventListener("click", startGame);
@@ -695,11 +1051,19 @@
     myPlayerName = (nameInput.value || "Oyuncu").trim().slice(0, 12) || "Oyuncu";
     myPlayerId = "p_" + Math.random().toString(36).slice(2, 10);
 
+    // Seçilen türe göre karakteri yeniden oluştur (varsayılan insan yerine)
+    scene.remove(myMesh);
+    myMesh = createCharacterMesh(myPlayerType, myColor);
+    scene.add(myMesh);
+
     document.getElementById("nameEntry").style.display = "none";
     document.getElementById("hud").style.display = "block";
     document.getElementById("chatBox").style.display = "flex";
-    document.getElementById("myName").textContent = myPlayerName;
-    dlog("Katıldın: " + myPlayerName + " (ID: " + myPlayerId + ")");
+    document.getElementById("myName").textContent = myPlayerName + (myPlayerType === "dog" ? " 🐕" : " 🧍");
+    if (myPlayerType === "human") {
+      document.getElementById("leashControl").style.display = "flex";
+    }
+    dlog("Katıldın: " + myPlayerName + " (" + myPlayerType + ", ID: " + myPlayerId + ")");
 
     listenOtherPlayers();
     listenChat();
@@ -716,6 +1080,7 @@
 
     updateLocalPlayer(delta);
     updateOtherPlayers(delta);
+    updateLeash();
     sendMyPosition();
 
     renderer.render(scene, camera);
