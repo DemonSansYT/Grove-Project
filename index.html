@@ -12,6 +12,8 @@
     background: #111;
     font-family: Arial, sans-serif;
   }
+  canvas { display: block; }
+
   #hud {
     position: fixed;
     top: 10px;
@@ -25,77 +27,7 @@
     line-height: 1.5;
   }
   #hud b { color: #7CFC00; }
-  #nameEntry {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    flex-direction: column;
-    gap: 12px;
-  }
-  #nameEntry input {
-    padding: 10px 14px;
-    font-size: 16px;
-    border-radius: 6px;
-    border: none;
-    width: 220px;
-    text-align: center;
-  }
-  #nameEntry button {
-    padding: 10px 24px;
-    font-size: 16px;
-    border-radius: 6px;
-    border: none;
-    background: #4CAF50;
-    color: white;
-    cursor: pointer;
-  }
-  #nameEntry h2 { color: white; margin: 0; }
-  canvas { display: block; }
 
-  /* --- Mobil Joystick --- */
-  #joystickZone {
-    position: fixed;
-    left: 30px;
-    bottom: 30px;
-    width: 130px;
-    height: 130px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.15);
-    border: 2px solid rgba(255,255,255,0.4);
-    z-index: 20;
-    touch-action: none;
-    display: none;
-  }
-  #joystickStick {
-    position: absolute;
-    left: 35px;
-    top: 35px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.6);
-    pointer-events: none;
-  }
-  #jumpBtn {
-    position: fixed;
-    right: 30px;
-    bottom: 40px;
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.25);
-    border: 2px solid rgba(255,255,255,0.5);
-    color: #fff;
-    font-size: 15px;
-    font-weight: bold;
-    z-index: 20;
-    touch-action: none;
-    display: none;
-  }
   #versionTag {
     position: fixed;
     top: 10px;
@@ -107,6 +39,27 @@
     font-size: 13px;
     font-family: monospace;
     z-index: 10;
+  }
+
+  #debugToggleBtn {
+    position: fixed;
+    top: 46px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 15px;
+    z-index: 16;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #debugToggleBtn.hasNew {
+    border-color: #ff4444;
+    box-shadow: 0 0 6px #ff4444;
   }
   #debugPanel {
     position: fixed;
@@ -128,28 +81,8 @@
     white-space: pre-wrap;
     pointer-events: none;
   }
-  #debugToggleBtn {
-    position: fixed;
-    top: 46px;
-    right: 14px;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: #fff;
-    font-size: 15px;
-    z-index: 16;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  #debugToggleBtn.hasNew {
-    border-color: #ff4444;
-    box-shadow: 0 0 6px #ff4444;
-  }
 
-  /* --- Chat kutusu (sol üst) --- */
+  /* --- Chat kutusu --- */
   #chatBox {
     position: fixed;
     top: 195px;
@@ -193,11 +126,83 @@
     font-size: 12px;
     font-weight: bold;
   }
+
+  /* --- Join ekranı --- */
+  #nameEntry {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    flex-direction: column;
+    gap: 12px;
+  }
+  #nameEntry h2 { color: white; margin: 0; }
+  #nameEntry input {
+    padding: 10px 14px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+    width: 220px;
+    text-align: center;
+  }
+  #nameEntry button {
+    padding: 10px 24px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    cursor: pointer;
+  }
+
+  /* --- Mobil Joystick --- */
+  #joystickZone {
+    position: fixed;
+    left: 30px;
+    bottom: 30px;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.4);
+    z-index: 20;
+    touch-action: none;
+    display: none;
+  }
+  #joystickStick {
+    position: absolute;
+    left: 35px;
+    top: 35px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    pointer-events: none;
+  }
+  #jumpBtn {
+    position: fixed;
+    right: 30px;
+    bottom: 40px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.5);
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    z-index: 20;
+    touch-action: none;
+    display: none;
+  }
 </style>
 </head>
 <body>
 
-<div id="versionTag">v2.1</div>
+<div id="versionTag">v3.0</div>
 <button id="debugToggleBtn" title="Debug konsolu">🐞</button>
 <div id="debugPanel"></div>
 
@@ -231,8 +236,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import {
     getFirestore, doc, setDoc, deleteDoc, onSnapshot,
-    collection, serverTimestamp, Timestamp,
-    addDoc, query, orderBy, limit
+    collection, serverTimestamp, addDoc, query, orderBy, limit
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -247,7 +251,11 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // --- DEBUG PANELİ: sorun tespiti için ekrana log basar (buton ile açılır/kapanır) ---
+  const ROOM_ID = "prototype-room";
+  const playersCol = collection(db, "rooms", ROOM_ID, "players");
+  const chatCol = collection(db, "rooms", ROOM_ID, "chat");
+
+  // --- DEBUG PANELİ (buton ile açılır/kapanır) ---
   const debugPanel = document.getElementById("debugPanel");
   const debugToggleBtn = document.getElementById("debugToggleBtn");
   let debugPanelOpen = false;
@@ -269,9 +277,6 @@
   window.addEventListener("error", (e) => dlog("JS HATA: " + e.message));
   dlog("Firebase başlatıldı, projectId=" + firebaseConfig.projectId);
 
-  const ROOM_ID = "prototype-room"; // ileride birden fazla oda/sahne olursa buradan değişir
-  const playersCol = collection(db, "rooms", ROOM_ID, "players");
-
   // ---------------------------------------------------------
   // THREE.JS SETUP
   // ---------------------------------------------------------
@@ -279,7 +284,7 @@
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
-  scene.fog = new THREE.Fog(0x87ceeb, 40, 160);
+  scene.fog = new THREE.Fog(0x87ceeb, 20, 80);
 
   const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -307,29 +312,35 @@
   sunLight.shadow.camera.bottom = -40;
   scene.add(sunLight);
 
-  // Zemin (şehrin altını kaplayan geniş asfalt/toprak taban)
-  const groundGeo = new THREE.PlaneGeometry(400, 400);
-  const groundMat = new THREE.MeshStandardMaterial({ color: 0x2f2f2f });
-  const ground = new THREE.Mesh(groundGeo, groundMat);
+  // Basit zemin
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshStandardMaterial({ color: 0x3a3a3a })
+  );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
 
+  const grid = new THREE.GridHelper(200, 40, 0x555555, 0x2a2a2a);
+  scene.add(grid);
+
   // ---------------------------------------------------------
-  // OYUNCU (kendi karakterin) - şimdilik küp, sonra model gelecek
+  // OYUNCU (kendi karakterin)
   // ---------------------------------------------------------
   function createPlayerMesh(color) {
     const group = new THREE.Group();
-    const bodyGeo = new THREE.BoxGeometry(1, 1.6, 0.6);
-    const bodyMat = new THREE.MeshStandardMaterial({ color });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1.6, 0.6),
+      new THREE.MeshStandardMaterial({ color })
+    );
     body.position.y = 0.8;
     body.castShadow = true;
     group.add(body);
 
-    const headGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-    const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
-    const head = new THREE.Mesh(headGeo, headMat);
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.6, 0.6),
+      new THREE.MeshStandardMaterial({ color: 0xffdbac })
+    );
     head.position.y = 1.9;
     head.castShadow = true;
     group.add(head);
@@ -341,692 +352,9 @@
   const myMesh = createPlayerMesh(myColor);
   scene.add(myMesh);
 
-  // Karakterin gerçek boyu (body 1.6 + head 0.6 üst üste) - şehri buna göre ölçekleyeceğiz
-  const PLAYER_HEIGHT = 2.2;
-  const FLOOR_HEIGHT = PLAYER_HEIGHT * 1.4; // bir kat yüksekliği ~3 birim
-
   // ---------------------------------------------------------
-  // PROSEDÜREL LOW-POLY ŞEHİR ÜRETİMİ (dışarıdan asset yok, tamamen koddan üretiliyor)
+  // KLAVYE / JOYSTICK / KAMERA KONTROLLERİ
   // ---------------------------------------------------------
-
-  // Küçük canvas dokuları (pencere ızgarası, yol çizgisi vs.) - tamamen kod ile çiziliyor
-  function makeCanvasTexture(drawFn, size = 128) {
-    const canvas = document.createElement("canvas");
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    drawFn(ctx, size);
-    const tex = new THREE.CanvasTexture(canvas);
-    return tex;
-  }
-
-  function makeWindowTexture(wallColor, litColor) {
-    return makeCanvasTexture((ctx, size) => {
-      ctx.fillStyle = wallColor;
-      ctx.fillRect(0, 0, size, size);
-      const cols = 4, rows = 6;
-      const cellW = size / cols, cellH = size / rows;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const pad = cellW * 0.18;
-          ctx.fillStyle = Math.random() < 0.55 ? litColor : "#141a24";
-          ctx.fillRect(c * cellW + pad, r * cellH + pad * 1.4, cellW - pad * 2, cellH - pad * 2.2);
-        }
-      }
-    }, 128);
-  }
-
-  function makeRoadTexture() {
-    return makeCanvasTexture((ctx, size) => {
-      ctx.fillStyle = "#2b2b2e";
-      ctx.fillRect(0, 0, size, size);
-      // Hafif doku/gürültü (tamamen düz görünmesin diye)
-      for (let i = 0; i < 40; i++) {
-        ctx.fillStyle = "rgba(255,255,255," + (Math.random() * 0.03) + ")";
-        ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
-      }
-    }, 64);
-  }
-
-  function makeCrosswalkTexture() {
-    return makeCanvasTexture((ctx, size) => {
-      ctx.fillStyle = "#2b2b2e";
-      ctx.fillRect(0, 0, size, size);
-      ctx.fillStyle = "#e8e4d0";
-      const stripes = 6;
-      for (let i = 0; i < stripes; i++) {
-        if (i % 2 === 0) {
-          ctx.fillRect((i / stripes) * size, 0, size / stripes * 0.8, size);
-        }
-      }
-    }, 64);
-  }
-
-  function makeSidewalkTexture() {
-    return makeCanvasTexture((ctx, size) => {
-      ctx.fillStyle = "#9a9a92";
-      ctx.fillRect(0, 0, size, size);
-      ctx.strokeStyle = "#7d7d76";
-      ctx.lineWidth = size * 0.03;
-      for (let i = 0; i <= 4; i++) {
-        ctx.beginPath();
-        ctx.moveTo((i / 4) * size, 0);
-        ctx.lineTo((i / 4) * size, size);
-        ctx.stroke();
-      }
-    }, 64);
-  }
-
-  const cityGroup = new THREE.Group();
-  scene.add(cityGroup);
-
-  const trafficLights = [];
-  const cars = [];
-  const pedestrians = [];
-  const smokeParticles = [];
-
-  const BUILDING_PALETTE = [0xd8a45a, 0xb5735a, 0x8a9a8f, 0xc9b458, 0x9aa7b5, 0xb08968, 0x7a8b6f, 0xc47a5a, 0xa6644a, 0x7d8fa3];
-
-  // Bir bina "gövdesi" (tek dikdörtgen kütle) oluşturur - kademeli kuleler bunu birkaç kez çağırır
-  function buildMassing(w, h, d, baseColorHex, windowLit) {
-    const winTex = makeWindowTexture("#" + baseColorHex.toString(16).padStart(6, "0"), windowLit);
-    winTex.wrapS = winTex.wrapT = THREE.RepeatWrapping;
-    // Tekrar sayısını sınırlı tut ki doku aşırı küçülüp "tekrar ediyor" hissi vermesin
-    const repX = Math.min(6, Math.max(1, Math.round(w / 3.2)));
-    const repY = Math.min(6, Math.max(1, Math.round(h / FLOOR_HEIGHT)));
-    winTex.repeat.set(repX, repY);
-
-    const sideMat = new THREE.MeshStandardMaterial({ map: winTex });
-    const roofMat = new THREE.MeshStandardMaterial({ color: baseColorHex });
-    const geo = new THREE.BoxGeometry(w, h, d);
-    const mats = [sideMat, sideMat, roofMat, roofMat, sideMat, sideMat];
-    const mesh = new THREE.Mesh(geo, mats);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-
-    // Köşelere ince koyu çizgiler (edges) - düzlüğü kırar, "kutu" hissini azaltır
-    const edges = new THREE.EdgesGeometry(geo, 20);
-    const edgeMat = new THREE.LineBasicMaterial({ color: 0x1a1a1a, transparent: true, opacity: 0.35 });
-    const edgeLines = new THREE.LineSegments(edges, edgeMat);
-    mesh.add(edgeLines);
-
-    return mesh;
-  }
-
-  function buildBuilding(x, z, footprintW, footprintD) {
-    const group = new THREE.Group();
-    const floors = 2 + Math.floor(Math.random() * 7); // 2-8 kat
-    const baseColor = BUILDING_PALETTE[Math.floor(Math.random() * BUILDING_PALETTE.length)];
-    const windowLitColors = ["#ffe9a8", "#ffd97a", "#cfe8ff", "#fff4d0"];
-    const windowLit = windowLitColors[Math.floor(Math.random() * windowLitColors.length)];
-
-    // --- Zemin kat / giriş çeşitliliği: yükseltilmiş+merdivenli, kaldırım altı (sunken), ya da düz ---
-    const entranceType = Math.random();
-    let plinthHeight = 0;
-
-    if (entranceType < 0.35) {
-      // Yükseltilmiş giriş: küçük bir platform (stylobate) + önüne daralan merdiven basamakları
-      plinthHeight = FLOOR_HEIGHT * 0.35;
-      const plinthGeo = new THREE.BoxGeometry(footprintW * 1.05, plinthHeight, footprintD * 1.05);
-      const plinthMat = new THREE.MeshStandardMaterial({ color: 0x8a8a82 });
-      const plinth = new THREE.Mesh(plinthGeo, plinthMat);
-      plinth.position.y = plinthHeight / 2;
-      plinth.receiveShadow = true;
-      plinth.castShadow = true;
-      group.add(plinth);
-
-      const stepCount = 3;
-      for (let s = 0; s < stepCount; s++) {
-        const stepW = footprintW * 0.4 * (1 - s / (stepCount + 1));
-        const stepH = plinthHeight / stepCount;
-        const stepGeo = new THREE.BoxGeometry(stepW, stepH, 0.5);
-        const stepMesh = new THREE.Mesh(stepGeo, plinthMat);
-        stepMesh.position.set(0, stepH / 2 + s * stepH, footprintD / 2 + 0.25 + (stepCount - s) * 0.35);
-        stepMesh.receiveShadow = true;
-        stepMesh.castShadow = true;
-        group.add(stepMesh);
-      }
-    } else if (entranceType < 0.6) {
-      // Kaldırım altı (sunken) giriş: binanın önünde küçük bir çukur + aşağı inen basamaklar
-      const pitDepth = FLOOR_HEIGHT * 0.5;
-      const pitW = footprintW * 0.35;
-      const pitGeo = new THREE.BoxGeometry(pitW, 0.1, 1.6);
-      const pitMat = new THREE.MeshStandardMaterial({ color: 0x1e1e1e });
-      const pit = new THREE.Mesh(pitGeo, pitMat);
-      pit.position.set(0, -pitDepth + 0.05, footprintD / 2 + 0.9);
-      group.add(pit);
-
-      const railGeo = new THREE.BoxGeometry(pitW + 0.2, 0.5, 0.06);
-      const railMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-      const rail = new THREE.Mesh(railGeo, railMat);
-      rail.position.set(0, 0.25, footprintD / 2 + 0.1);
-      group.add(rail);
-    }
-    // else (entranceType >= 0.6): düz zemin, ekstra detay yok
-
-    // --- Ana gövde: bazen tek dikdörtgen, bazen L şeklinde (iki kütle) ---
-    const isLShape = Math.random() < 0.3;
-    const tiers = floors > 5 && Math.random() < 0.5 ? 2 : 1;
-
-    let currentY = plinthHeight;
-    let currentW = footprintW, currentD = footprintD;
-
-    for (let t = 0; t < tiers; t++) {
-      const tierFloors = t === 0 ? Math.ceil(floors * (tiers === 2 ? 0.6 : 1)) : floors - Math.ceil(floors * 0.6);
-      const h = tierFloors * FLOOR_HEIGHT;
-      const w = currentW * (t === 0 ? 1 : 0.6);
-      const d = currentD * (t === 0 ? 1 : 0.6);
-
-      const mainMesh = buildMassing(w, h, d, baseColor, windowLit);
-      mainMesh.position.set(0, currentY + h / 2, 0);
-      group.add(mainMesh);
-
-      // Sadece zemin kademesinde L-kanat ekle (üst kademelere eklemiyoruz, karışmasın)
-      if (t === 0 && isLShape) {
-        const wingW = w * (0.35 + Math.random() * 0.15);
-        const wingD = d * (0.35 + Math.random() * 0.15);
-        const wingH = h * (0.55 + Math.random() * 0.25);
-        const wingMesh = buildMassing(wingW, wingH, wingD, baseColor, windowLit);
-        const cornerX = (w / 2 - wingW / 2) * (Math.random() < 0.5 ? 1 : -1);
-        const cornerZ = (d / 2 + wingD / 2) - 0.3;
-        wingMesh.position.set(cornerX, currentY + wingH / 2, cornerZ);
-        group.add(wingMesh);
-      }
-
-      // Balkonlar: bazı katlara ince çıkıntılar (üst kademe yoksa ve bina yeterince genişse)
-      if (t === 0 && w > 4 && Math.random() < 0.5) {
-        const balconyFloors = Math.min(tierFloors - 1, 3);
-        for (let bf = 1; bf <= balconyFloors; bf++) {
-          if (Math.random() < 0.6) continue;
-          const balcGeo = new THREE.BoxGeometry(w * 0.5, 0.12, 0.5);
-          const balcMat = new THREE.MeshStandardMaterial({ color: 0x707070 });
-          const balc = new THREE.Mesh(balcGeo, balcMat);
-          balc.position.set((Math.random() - 0.5) * w * 0.3, currentY + bf * FLOOR_HEIGHT - FLOOR_HEIGHT * 0.4, d / 2 + 0.25);
-          balc.castShadow = true;
-          group.add(balc);
-        }
-      }
-
-      currentY += h;
-      currentW = w; currentD = d;
-    }
-
-    // Zemin kat kapı/tente (varsa görsel bir "giriş" hissi versin)
-    if (Math.random() < 0.7) {
-      const awningGeo = new THREE.BoxGeometry(footprintW * 0.4, 0.12, 0.8);
-      const awningColors = [0xb03a3a, 0x2e6b4f, 0x2a5a8a, 0xb08a2a];
-      const awningMat = new THREE.MeshStandardMaterial({ color: awningColors[Math.floor(Math.random() * awningColors.length)] });
-      const awning = new THREE.Mesh(awningGeo, awningMat);
-      awning.position.set(0, plinthHeight + FLOOR_HEIGHT * 0.75, footprintD / 2 + 0.4);
-      awning.castShadow = true;
-      group.add(awning);
-    }
-
-    // Çatı detayı: bazen üçgen (piramit) çatı, bazen küçük klima/su deposu kutuları
-    if (Math.random() < 0.35) {
-      const roofGeo = new THREE.ConeGeometry(Math.max(currentW, currentD) * 0.72, FLOOR_HEIGHT * 0.9, 4);
-      const roofMat = new THREE.MeshStandardMaterial({ color: 0x6b4a3a });
-      const roofMesh = new THREE.Mesh(roofGeo, roofMat);
-      roofMesh.rotation.y = Math.PI / 4;
-      roofMesh.position.y = currentY + (FLOOR_HEIGHT * 0.9) / 2;
-      roofMesh.castShadow = true;
-      group.add(roofMesh);
-    } else {
-      // küçük çatı üstü kutular (klima/su deposu hissi)
-      const propCount = 1 + Math.floor(Math.random() * 2);
-      for (let p = 0; p < propCount; p++) {
-        const pw = 0.5 + Math.random() * 0.6;
-        const propGeo = new THREE.BoxGeometry(pw, pw * 0.8, pw);
-        const propMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
-        const prop = new THREE.Mesh(propGeo, propMat);
-        prop.position.set(
-          (Math.random() - 0.5) * currentW * 0.5,
-          currentY + (pw * 0.8) / 2,
-          (Math.random() - 0.5) * currentD * 0.5
-        );
-        prop.castShadow = true;
-        group.add(prop);
-      }
-    }
-
-    group.position.set(x, 0, z);
-    return group;
-  }
-
-  function buildTree(x, z, palm) {
-    const group = new THREE.Group();
-    if (palm) {
-      const trunkGeo = new THREE.CylinderGeometry(0.14, 0.22, PLAYER_HEIGHT * 2.2, 6);
-      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
-      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-      trunk.position.y = PLAYER_HEIGHT * 1.1;
-      trunk.rotation.z = (Math.random() - 0.5) * 0.25;
-      trunk.castShadow = true;
-      group.add(trunk);
-
-      const frondMat = new THREE.MeshStandardMaterial({ color: 0x4c8a4c, side: THREE.DoubleSide });
-      const frondCount = 6;
-      for (let i = 0; i < frondCount; i++) {
-        const frondGeo = new THREE.PlaneGeometry(1.6, 0.4);
-        const frond = new THREE.Mesh(frondGeo, frondMat);
-        frond.position.y = PLAYER_HEIGHT * 2.15;
-        frond.rotation.y = (i / frondCount) * Math.PI * 2;
-        frond.rotation.x = -0.6;
-        frond.translateZ(0.8);
-        frond.castShadow = true;
-        group.add(frond);
-      }
-    } else {
-      const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, PLAYER_HEIGHT * 0.9, 6);
-      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a3a });
-      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-      trunk.position.y = PLAYER_HEIGHT * 0.45;
-      trunk.castShadow = true;
-      group.add(trunk);
-
-      const leafGeo = new THREE.ConeGeometry(PLAYER_HEIGHT * 0.65, PLAYER_HEIGHT * 1.4, 7);
-      const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f7a3f });
-      const leaf = new THREE.Mesh(leafGeo, leafMat);
-      leaf.position.y = PLAYER_HEIGHT * 1.3;
-      leaf.castShadow = true;
-      group.add(leaf);
-    }
-    group.position.set(x, 0, z);
-    return group;
-  }
-
-  function buildStreetlight(x, z) {
-    const group = new THREE.Group();
-    const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, PLAYER_HEIGHT * 2.3, 6);
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
-    const pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.y = PLAYER_HEIGHT * 1.15;
-    pole.castShadow = true;
-    group.add(pole);
-
-    const lampGeo = new THREE.SphereGeometry(0.22, 8, 8);
-    const lampMat = new THREE.MeshStandardMaterial({ color: 0xfff2c0, emissive: 0xffe38a, emissiveIntensity: 0.6 });
-    const lamp = new THREE.Mesh(lampGeo, lampMat);
-    lamp.position.y = PLAYER_HEIGHT * 2.3;
-    group.add(lamp);
-
-    group.position.set(x, 0, z);
-    return group;
-  }
-
-  function buildTrashCan(x, z) {
-    const group = new THREE.Group();
-    const canGeo = new THREE.CylinderGeometry(0.32, 0.28, 0.75, 8);
-    const canMat = new THREE.MeshStandardMaterial({ color: 0x2f5a3f });
-    const can = new THREE.Mesh(canGeo, canMat);
-    can.position.y = 0.375;
-    can.castShadow = true;
-    can.receiveShadow = true;
-    group.add(can);
-    const lidGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.06, 8);
-    const lid = new THREE.Mesh(lidGeo, new THREE.MeshStandardMaterial({ color: 0x1e3a28 }));
-    lid.position.y = 0.75;
-    group.add(lid);
-    group.position.set(x, 0, z);
-    group.rotation.y = Math.random() * Math.PI * 2;
-    return group;
-  }
-
-  function buildCardboardBox(x, z) {
-    const group = new THREE.Group();
-    const count = 1 + Math.floor(Math.random() * 2);
-    for (let i = 0; i < count; i++) {
-      const s = 0.35 + Math.random() * 0.25;
-      const geo = new THREE.BoxGeometry(s, s * 0.85, s);
-      const mat = new THREE.MeshStandardMaterial({ color: 0xb08a5a });
-      const box = new THREE.Mesh(geo, mat);
-      box.position.set((Math.random() - 0.5) * 0.4, s * 0.425, (Math.random() - 0.5) * 0.4);
-      box.rotation.y = Math.random() * Math.PI;
-      box.castShadow = true;
-      box.receiveShadow = true;
-      group.add(box);
-    }
-    group.position.set(x, 0, z);
-    return group;
-  }
-
-  function buildBusStop(x, z, rotY) {
-    const group = new THREE.Group();
-    const postMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
-
-    // Çatı direkleri
-    [-0.9, 0.9].forEach((ox) => {
-      const postGeo = new THREE.CylinderGeometry(0.05, 0.05, PLAYER_HEIGHT * 1.05, 6);
-      const post = new THREE.Mesh(postGeo, postMat);
-      post.position.set(ox, PLAYER_HEIGHT * 0.525, 0);
-      post.castShadow = true;
-      group.add(post);
-    });
-
-    // Çatı
-    const roofGeo = new THREE.BoxGeometry(2.1, 0.08, 0.9);
-    const roof = new THREE.Mesh(roofGeo, new THREE.MeshStandardMaterial({ color: 0x3a5a7a }));
-    roof.position.y = PLAYER_HEIGHT * 1.05;
-    roof.castShadow = true;
-    group.add(roof);
-
-    // Arka cam paneli
-    const glassGeo = new THREE.BoxGeometry(1.9, PLAYER_HEIGHT * 0.85, 0.04);
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x9fc4d8, transparent: true, opacity: 0.35 });
-    const glass = new THREE.Mesh(glassGeo, glassMat);
-    glass.position.set(0, PLAYER_HEIGHT * 0.5, -0.4);
-    group.add(glass);
-
-    // Bank
-    const benchGeo = new THREE.BoxGeometry(1.7, 0.08, 0.4);
-    const bench = new THREE.Mesh(benchGeo, new THREE.MeshStandardMaterial({ color: 0x6b4a3a }));
-    bench.position.set(0, PLAYER_HEIGHT * 0.35, -0.2);
-    bench.castShadow = true;
-    group.add(bench);
-
-    group.position.set(x, 0, z);
-    group.rotation.y = rotY;
-    return group;
-  }
-
-  function buildBench(x, z, rotY) {
-    const group = new THREE.Group();
-    const seatGeo = new THREE.BoxGeometry(1.4, 0.07, 0.4);
-    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
-    const seat = new THREE.Mesh(seatGeo, woodMat);
-    seat.position.y = 0.42;
-    seat.castShadow = true;
-    group.add(seat);
-    const backGeo = new THREE.BoxGeometry(1.4, 0.4, 0.06);
-    const back = new THREE.Mesh(backGeo, woodMat);
-    back.position.set(0, 0.62, -0.17);
-    back.castShadow = true;
-    group.add(back);
-    [-0.55, 0.55].forEach((ox) => {
-      const legGeo = new THREE.BoxGeometry(0.08, 0.42, 0.35);
-      const leg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({ color: 0x333333 }));
-      leg.position.set(ox, 0.21, 0);
-      group.add(leg);
-    });
-    group.position.set(x, 0, z);
-    group.rotation.y = rotY;
-    return group;
-  }
-
-  function buildTrafficLight(x, z, rotY) {
-    const group = new THREE.Group();
-    const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, PLAYER_HEIGHT * 1.8, 6);
-    const pole = new THREE.Mesh(poleGeo, new THREE.MeshStandardMaterial({ color: 0x2a2a2a }));
-    pole.position.y = PLAYER_HEIGHT * 0.9;
-    pole.castShadow = true;
-    group.add(pole);
-
-    const boxGeo = new THREE.BoxGeometry(0.35, 0.9, 0.3);
-    const boxMesh = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
-    boxMesh.position.y = PLAYER_HEIGHT * 1.8 + 0.45;
-    group.add(boxMesh);
-
-    const lightColors = [0xff3b3b, 0xffd23b, 0x3bff5c];
-    const lights = [];
-    lightColors.forEach((c, i) => {
-      const lGeo = new THREE.SphereGeometry(0.11, 8, 8);
-      const lMat = new THREE.MeshStandardMaterial({ color: 0x330000, emissive: 0x000000 });
-      const lMesh = new THREE.Mesh(lGeo, lMat);
-      lMesh.position.set(0, PLAYER_HEIGHT * 1.8 + 0.75 - i * 0.32, 0.17);
-      group.add(lMesh);
-      lights.push({ mesh: lMesh, color: c });
-    });
-
-    group.position.set(x, 0, z);
-    group.rotation.y = rotY;
-    trafficLights.push({ group, lights, phase: Math.random() * 6 });
-    return group;
-  }
-
-  function buildCar() {
-    const group = new THREE.Group();
-    const carColors = [0xc94a3a, 0x3a6bc9, 0xd8d8d8, 0x2a2a2a, 0xe0b83a, 0x4a8a5a];
-    const color = carColors[Math.floor(Math.random() * carColors.length)];
-
-    const bodyGeo = new THREE.BoxGeometry(1.7, 0.55, 3.2);
-    const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color }));
-    body.position.y = 0.5;
-    body.castShadow = true;
-    group.add(body);
-
-    const cabinGeo = new THREE.BoxGeometry(1.4, 0.45, 1.6);
-    const cabin = new THREE.Mesh(cabinGeo, new THREE.MeshStandardMaterial({ color: 0x1a1a1a, transparent: true, opacity: 0.75 }));
-    cabin.position.set(0, 0.98, -0.2);
-    cabin.castShadow = true;
-    group.add(cabin);
-
-    const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 8);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    [[-0.8, -1.1], [0.8, -1.1], [-0.8, 1.1], [0.8, 1.1]].forEach(([wx, wz]) => {
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(wx, 0.28, wz);
-      group.add(wheel);
-    });
-
-    // Farlar
-    const headlightGeo = new THREE.BoxGeometry(0.25, 0.12, 0.05);
-    const headlightMat = new THREE.MeshStandardMaterial({ color: 0xfff8d0, emissive: 0xfff8d0, emissiveIntensity: 0.4 });
-    [-0.55, 0.55].forEach((hx) => {
-      const hl = new THREE.Mesh(headlightGeo, headlightMat);
-      hl.position.set(hx, 0.55, 1.6);
-      group.add(hl);
-    });
-
-    return group;
-  }
-
-  function buildPedestrian() {
-    const skinColors = [0xffdbac, 0xe0ac69, 0xc68642, 0x8d5524];
-    const outfitColors = [0xd8534a, 0x3a7ac9, 0x4a9a5a, 0xe0b83a, 0x7a4ac9, 0x3a3a3a, 0xd88ac0];
-    const group = new THREE.Group();
-
-    const bodyGeo = new THREE.BoxGeometry(0.85 * (PLAYER_HEIGHT / 2.2), 1.3 * (PLAYER_HEIGHT / 2.2), 0.5 * (PLAYER_HEIGHT / 2.2));
-    const bodyMat = new THREE.MeshStandardMaterial({ color: outfitColors[Math.floor(Math.random() * outfitColors.length)] });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.65 * (PLAYER_HEIGHT / 2.2);
-    body.castShadow = true;
-    group.add(body);
-
-    const headGeo = new THREE.BoxGeometry(0.5 * (PLAYER_HEIGHT / 2.2), 0.5 * (PLAYER_HEIGHT / 2.2), 0.5 * (PLAYER_HEIGHT / 2.2));
-    const headMat = new THREE.MeshStandardMaterial({ color: skinColors[Math.floor(Math.random() * skinColors.length)] });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.55 * (PLAYER_HEIGHT / 2.2);
-    head.castShadow = true;
-    group.add(head);
-
-    return group;
-  }
-  const BLOCKS = 5; // 5x5 blok şehir
-  const BLOCK_SIZE = FLOOR_HEIGHT * 7; // her blok kabaca bir binanın 7 katı genişliğinde
-  const ROAD_WIDTH = PLAYER_HEIGHT * 3.5;
-  const SIDEWALK_WIDTH = PLAYER_HEIGHT * 0.6;
-  const CELL = BLOCK_SIZE + ROAD_WIDTH;
-  const totalSize = BLOCKS * CELL;
-  const startOffset = -totalSize / 2 + BLOCK_SIZE / 2;
-
-  const roadTex = makeRoadTexture();
-  roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
-  const sidewalkTex = makeSidewalkTexture();
-  sidewalkTex.wrapS = sidewalkTex.wrapT = THREE.RepeatWrapping;
-  const crosswalkTexX = makeCrosswalkTexture();
-  const crosswalkTexZ = makeCrosswalkTexture();
-
-  // Kavşak (yol kesişim) koordinatlarını sakla - araba/trafik ışığı/yaya geçidi için kullanılacak
-  const roadCoords = [];
-  for (let i = 0; i <= BLOCKS; i++) {
-    roadCoords.push(startOffset - BLOCK_SIZE / 2 - ROAD_WIDTH / 2 + i * CELL);
-  }
-
-  // Yol zemini (X ve Z yönü şeritleri)
-  for (let i = 0; i <= BLOCKS; i++) {
-    const roadGeo = new THREE.PlaneGeometry(totalSize + ROAD_WIDTH, ROAD_WIDTH);
-    const tex = roadTex.clone(); tex.needsUpdate = true;
-    tex.repeat.set((totalSize + ROAD_WIDTH) / 4, 1);
-    const roadMat = new THREE.MeshStandardMaterial({ map: tex });
-    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
-    roadMesh.rotation.x = -Math.PI / 2;
-    roadMesh.position.set(0, 0.02, roadCoords[i]);
-    roadMesh.receiveShadow = true;
-    cityGroup.add(roadMesh);
-
-    const roadGeoZ = new THREE.PlaneGeometry(ROAD_WIDTH, totalSize + ROAD_WIDTH);
-    const texZ = roadTex.clone(); texZ.needsUpdate = true;
-    texZ.repeat.set(1, (totalSize + ROAD_WIDTH) / 4);
-    const roadMatZ = new THREE.MeshStandardMaterial({ map: texZ });
-    const roadMeshZ = new THREE.Mesh(roadGeoZ, roadMatZ);
-    roadMeshZ.rotation.x = -Math.PI / 2;
-    roadMeshZ.position.set(roadCoords[i], 0.02, 0);
-    roadMeshZ.receiveShadow = true;
-    cityGroup.add(roadMeshZ);
-  }
-
-  // Kavşaklara düzgün hizalı yaya geçidi + bazılarına trafik ışığı
-  roadCoords.forEach((rx, i) => {
-    roadCoords.forEach((rz, j) => {
-      const cwXGeo = new THREE.PlaneGeometry(ROAD_WIDTH * 0.7, ROAD_WIDTH);
-      const cwXMat = new THREE.MeshStandardMaterial({ map: crosswalkTexX });
-      const cwX = new THREE.Mesh(cwXGeo, cwXMat);
-      cwX.rotation.x = -Math.PI / 2;
-      cwX.rotation.z = Math.PI / 2;
-      cwX.position.set(rx, 0.03, rz);
-      cityGroup.add(cwX);
-
-      if (Math.random() < 0.4) {
-        cityGroup.add(buildTrafficLight(rx - ROAD_WIDTH / 2 - 0.3, rz - ROAD_WIDTH / 2 - 0.3, Math.random() * Math.PI * 2));
-      }
-    });
-  });
-
-  // Bloklar: bina ya da küçük park
-  const pedestrianLoops = [];
-
-  for (let bx = 0; bx < BLOCKS; bx++) {
-    for (let bz = 0; bz < BLOCKS; bz++) {
-      const cx = startOffset + bx * CELL;
-      const cz = startOffset + bz * CELL;
-
-      // Kaldırım (blok kenarlarını çevreleyen açık gri şerit)
-      const sw = new THREE.Mesh(
-        new THREE.PlaneGeometry(BLOCK_SIZE + SIDEWALK_WIDTH * 2, BLOCK_SIZE + SIDEWALK_WIDTH * 2),
-        new THREE.MeshStandardMaterial({ map: sidewalkTex.clone() })
-      );
-      sw.rotation.x = -Math.PI / 2;
-      sw.position.set(cx, 0.015, cz);
-      sw.receiveShadow = true;
-      cityGroup.add(sw);
-
-      const isPark = Math.random() < 0.15;
-
-      if (isPark) {
-        const grass = new THREE.Mesh(
-          new THREE.PlaneGeometry(BLOCK_SIZE, BLOCK_SIZE),
-          new THREE.MeshStandardMaterial({ color: 0x4a7a3f })
-        );
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(cx, 0.02, cz);
-        grass.receiveShadow = true;
-        cityGroup.add(grass);
-
-        const treeCount = 3 + Math.floor(Math.random() * 4);
-        for (let i = 0; i < treeCount; i++) {
-          const tx = cx + (Math.random() - 0.5) * BLOCK_SIZE * 0.7;
-          const tz = cz + (Math.random() - 0.5) * BLOCK_SIZE * 0.7;
-          cityGroup.add(buildTree(tx, tz, Math.random() < 0.4));
-        }
-        if (Math.random() < 0.6) {
-          cityGroup.add(buildBench(cx + (Math.random() - 0.5) * BLOCK_SIZE * 0.4, cz + (Math.random() - 0.5) * BLOCK_SIZE * 0.4, Math.random() * Math.PI * 2));
-        }
-      } else {
-        // Blok içine 1-4 bina yerleştir (küçük ızgara)
-        const sub = Math.random() < 0.5 ? 1 : 2; // 1 büyük bina ya da 2x2 küçük binalar
-        if (sub === 1) {
-          const w = BLOCK_SIZE * (0.5 + Math.random() * 0.22);
-          const d = BLOCK_SIZE * (0.5 + Math.random() * 0.22);
-          cityGroup.add(buildBuilding(cx, cz, w, d));
-        } else {
-          const half = BLOCK_SIZE / 2;
-          const offsets = [[-half * 0.5, -half * 0.5], [half * 0.5, -half * 0.5], [-half * 0.5, half * 0.5], [half * 0.5, half * 0.5]];
-          offsets.forEach(([ox, oz]) => {
-            if (Math.random() < 0.85) {
-              const w = BLOCK_SIZE * (0.3 + Math.random() * 0.1);
-              const d = BLOCK_SIZE * (0.3 + Math.random() * 0.1);
-              cityGroup.add(buildBuilding(cx + ox, cz + oz, w, d));
-            }
-          });
-        }
-
-        // Kaldırıma rastgele sokak objeleri (çöp kutusu / karton kutu / otobüs durağı)
-        const edgeSign = Math.random() < 0.5 ? 1 : -1;
-        const propRoll = Math.random();
-        const propX = cx + (Math.random() - 0.5) * BLOCK_SIZE * 0.8;
-        const propZ = cz + edgeSign * (BLOCK_SIZE / 2 + SIDEWALK_WIDTH * 0.3);
-        if (propRoll < 0.3) {
-          cityGroup.add(buildTrashCan(propX, propZ));
-        } else if (propRoll < 0.5) {
-          cityGroup.add(buildCardboardBox(propX, propZ));
-        } else if (propRoll < 0.62) {
-          cityGroup.add(buildBusStop(propX, propZ, edgeSign > 0 ? 0 : Math.PI));
-        }
-      }
-
-      // Kaldırım köşelerine sokak lambası
-      if (Math.random() < 0.5) {
-        cityGroup.add(buildStreetlight(cx - BLOCK_SIZE / 2 - SIDEWALK_WIDTH * 0.5, cz - BLOCK_SIZE / 2 - SIDEWALK_WIDTH * 0.5));
-      }
-
-      // Bu bloğun kaldırım yürüyüş rotası (NPC'ler bina/yol içinden geçmesin diye sadece bu döngü üzerinde yürür)
-      const half = BLOCK_SIZE / 2 + SIDEWALK_WIDTH * 0.55;
-      pedestrianLoops.push([
-        new THREE.Vector3(cx - half, 0, cz - half),
-        new THREE.Vector3(cx + half, 0, cz - half),
-        new THREE.Vector3(cx + half, 0, cz + half),
-        new THREE.Vector3(cx - half, 0, cz + half)
-      ]);
-    }
-  }
-
-  // --- Yaya (NPC) trafiği: her biri kendi bloğunun kaldırım döngüsünde yürür ---
-  const PED_COUNT = Math.min(18, pedestrianLoops.length * 2);
-  for (let i = 0; i < PED_COUNT; i++) {
-    const loop = pedestrianLoops[Math.floor(Math.random() * pedestrianLoops.length)];
-    const mesh = buildPedestrian();
-    scene.add(mesh);
-    pedestrians.push({
-      mesh,
-      loop,
-      cornerIdx: Math.floor(Math.random() * 4),
-      dir: Math.random() < 0.5 ? 1 : -1,
-      t: Math.random(),
-      speed: 1.1 + Math.random() * 0.7
-    });
-  }
-
-  // --- Araba trafiği: yol hatları üzerinde, hafif şerit ofseti ile döngüsel gidiyor ---
-  const CAR_COUNT = Math.min(10, roadCoords.length * 2);
-  for (let i = 0; i < CAR_COUNT; i++) {
-    const horizontal = Math.random() < 0.5;
-    const laneCoord = roadCoords[Math.floor(Math.random() * roadCoords.length)];
-    const laneOffset = ROAD_WIDTH * 0.22 * (Math.random() < 0.5 ? 1 : -1);
-    const mesh = buildCar();
-    scene.add(mesh);
-    cars.push({
-      mesh,
-      horizontal,
-      laneCoord: laneCoord + laneOffset,
-      pos: -totalSize / 2 + Math.random() * totalSize,
-      dir: laneOffset > 0 ? 1 : -1,
-      speed: 6 + Math.random() * 5,
-      smokeTimer: 0
-    });
-  }
-
-  dlog("Prosedürel şehir üretildi: " + BLOCKS + "x" + BLOCKS + " blok, " + PED_COUNT + " yaya, " + CAR_COUNT + " araç, kat yüksekliği=" + FLOOR_HEIGHT.toFixed(2));
-
   const keys = {};
   window.addEventListener("keydown", (e) => {
     if (document.activeElement && document.activeElement.id === "chatInput") return;
@@ -1037,7 +365,6 @@
     keys[e.code] = false;
   });
 
-  // --- Mobil dokunmatik kontrol tespiti ---
   const isTouchDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
   if (isTouchDevice) {
     document.getElementById("joystickZone").style.display = "block";
@@ -1045,7 +372,6 @@
     document.getElementById("controlHint").textContent = "Sol joystick hareket, sağ buton zıpla";
   }
 
-  // --- Joystick mantığı ---
   let joyDx = 0, joyDz = 0;
   const joystickZone = document.getElementById("joystickZone");
   const joystickStick = document.getElementById("joystickStick");
@@ -1097,27 +423,24 @@
     }
   });
 
-  // --- Zıplama butonu ---
   let wantJump = false;
   const jumpBtn = document.getElementById("jumpBtn");
   jumpBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
-    e.stopPropagation(); // kamera sürükleme alanına sızmasın
+    e.stopPropagation();
     wantJump = true;
   }, { passive: false });
 
-  // --- Kamera döndürme (sağ taraftan sürükle) ---
+  // Kamera döndürme (sağ taraftan sürükle)
   let camYaw = 0;
-  let camPitch = 0.35; // radyan, yukarı/aşağı bakış açısı
+  let camPitch = 0.35;
   let camTouchId = null;
   let lastCamX = 0, lastCamY = 0;
 
   window.addEventListener("touchstart", (e) => {
     for (const t of e.changedTouches) {
       if (camTouchId !== null) continue;
-      // Joystick veya zıplama butonu üzerindeyse kamera kontrolüne alma
       if (joystickZone.contains(t.target) || jumpBtn.contains(t.target)) continue;
-      // Sadece ekranın sağ yarısı kamera için
       if (t.clientX < window.innerWidth / 2) continue;
       camTouchId = t.identifier;
       lastCamX = t.clientX;
@@ -1155,8 +478,6 @@
     if (keys["KeyS"]) dz += 1;
     if (keys["KeyA"]) dx -= 1;
     if (keys["KeyD"]) dx += 1;
-
-    // Joystick girdisini de ekle (klavye + joystick aynı anda çalışabilir)
     dx += joyDx;
     dz += joyDz;
 
@@ -1164,14 +485,12 @@
     if (inputLen > 0) {
       dx /= inputLen; dz /= inputLen;
 
-      // --- Kameraya göre hareket (camera-relative) ---
-      // Joystick "ileri" itildiğinde karakter kameranın baktığı yöne gitsin
       const forwardX = -Math.sin(camYaw);
       const forwardZ = -Math.cos(camYaw);
       const rightX = Math.cos(camYaw);
       const rightZ = -Math.sin(camYaw);
 
-      const forwardInput = -dz; // joystick ileri = dz negatif
+      const forwardInput = -dz;
       const strafeInput = dx;
 
       let moveX = forwardX * forwardInput + rightX * strafeInput;
@@ -1199,7 +518,6 @@
       isGrounded = true;
     }
 
-    // Kamera oyuncunun etrafında yörüngesel takip etsin (sağdan swipe ile döner)
     const dist = 7;
     const horizDist = dist * Math.cos(camPitch);
     const height = dist * Math.sin(camPitch) + 1.5;
@@ -1218,10 +536,10 @@
   // ---------------------------------------------------------
   let myPlayerId = null;
   let myPlayerName = "Oyuncu";
-  const otherPlayers = {}; // id -> { mesh, targetPos, targetRotY, lastUpdate }
+  const otherPlayers = {};
 
   let lastSentTime = 0;
-  const SEND_INTERVAL = 100; // ms - saniyede ~10 update
+  const SEND_INTERVAL = 100;
 
   function sendMyPosition() {
     if (!myPlayerId) return;
@@ -1243,25 +561,22 @@
   function listenOtherPlayers() {
     dlog("Firestore dinleme başlatılıyor, oda=" + ROOM_ID + ", benim ID=" + myPlayerId);
     onSnapshot(playersCol, (snapshot) => {
-      dlog("Snapshot geldi, toplam doküman: " + snapshot.size);
       const activeIds = new Set();
       const now = Date.now();
-      const STALE_MS = 6000; // 6 saniyedir güncelleme gelmiyorsa çevrimdışı say
-      const VERY_STALE_MS = 30000; // 30 saniyedir hiç güncelleme yoksa dokümanı sil
+      const STALE_MS = 6000;
+      const VERY_STALE_MS = 30000;
 
       snapshot.forEach((docSnap) => {
         const id = docSnap.id;
-        if (id === myPlayerId) return; // kendimizi tekrar çizmeyelim
+        if (id === myPlayerId) return;
         const data = docSnap.data();
 
-        // Güncelleme zamanı kontrolü (hayalet/kopan oyuncuları temizlemek için)
         let ageMs = 0;
         if (data.updatedAt && typeof data.updatedAt.toMillis === "function") {
           ageMs = now - data.updatedAt.toMillis();
         }
 
         if (ageMs > VERY_STALE_MS) {
-          // Uzun süredir hiç sinyal yok, dokümanı tamamen sil (herhangi bir istemci temizleyebilir)
           deleteDoc(doc(playersCol, id)).catch(() => {});
           if (otherPlayers[id]) {
             scene.remove(otherPlayers[id].mesh);
@@ -1271,7 +586,6 @@
         }
 
         if (ageMs > STALE_MS) {
-          // Yakın zamanda sinyal yok, çevrimdışı say ama dokümanı hemen silme
           if (otherPlayers[id]) {
             scene.remove(otherPlayers[id].mesh);
             delete otherPlayers[id];
@@ -1295,7 +609,6 @@
         }
       });
 
-      // Ayrılan oyuncuları temizle
       for (const id in otherPlayers) {
         if (!activeIds.has(id)) {
           scene.remove(otherPlayers[id].mesh);
@@ -1312,121 +625,62 @@
   function updateOtherPlayers(delta) {
     for (const id in otherPlayers) {
       const p = otherPlayers[id];
-      // Yumuşak geçiş (interpolation) - ışınlanma hissini önler
       p.mesh.position.lerp(p.targetPos, 0.15);
       p.mesh.rotation.y += (p.targetRotY - p.mesh.rotation.y) * 0.15;
     }
   }
 
-  // --- Yaya (NPC) trafiğini güncelle: her biri kendi kaldırım döngüsünde yürür ---
-  function updatePedestrians(delta) {
-    pedestrians.forEach((p) => {
-      const cur = p.loop[p.cornerIdx];
-      const nextIdx = (p.cornerIdx + p.dir + 4) % 4;
-      const next = p.loop[nextIdx];
-      const segLen = cur.distanceTo(next) || 1;
-      p.t += (p.speed * delta) / segLen;
-      if (p.t >= 1) {
-        p.t = 0;
-        p.cornerIdx = nextIdx;
-      }
-      const curNow = p.loop[p.cornerIdx];
-      const nextNow = p.loop[(p.cornerIdx + p.dir + 4) % 4];
-      p.mesh.position.lerpVectors(curNow, nextNow, p.t);
-      const dx = nextNow.x - curNow.x, dz = nextNow.z - curNow.z;
-      if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
-        p.mesh.rotation.y = Math.atan2(dx, dz);
-      }
-    });
-  }
-
-  // --- Araba trafiğini güncelle: yol boyunca döngüsel hareket + egzoz dumanı ---
-  function updateCars(delta) {
-    const halfTotal = totalSize / 2 + ROAD_WIDTH;
-    cars.forEach((c) => {
-      c.pos += c.dir * c.speed * delta;
-      if (c.pos > halfTotal) c.pos = -halfTotal;
-      if (c.pos < -halfTotal) c.pos = halfTotal;
-
-      if (c.horizontal) {
-        c.mesh.position.set(c.pos, 0, c.laneCoord);
-        c.mesh.rotation.y = c.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
-      } else {
-        c.mesh.position.set(c.laneCoord, 0, c.pos);
-        c.mesh.rotation.y = c.dir > 0 ? 0 : Math.PI;
-      }
-
-      // Egzoz dumanı - periyodik olarak arka tarafta küçük parçacık doğur
-      c.smokeTimer -= delta;
-      if (c.smokeTimer <= 0) {
-        c.smokeTimer = 0.12;
-        const backOffset = c.horizontal
-          ? new THREE.Vector3(c.dir > 0 ? -1.7 : 1.7, 0.25, 0)
-          : new THREE.Vector3(0, 0.25, c.dir > 0 ? -1.7 : 1.7);
-        const sx = c.mesh.position.x + backOffset.x;
-        const sy = c.mesh.position.y + backOffset.y;
-        const sz = c.mesh.position.z + backOffset.z;
-        spawnSmoke(sx, sy, sz);
-      }
-    });
-  }
-
-  // --- Egzoz dumanı parçacıkları ---
-  const smokeGeo = new THREE.SphereGeometry(0.14, 6, 6);
-  function spawnSmoke(x, y, z) {
-    const mat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.35 });
-    const mesh = new THREE.Mesh(smokeGeo, mat);
-    mesh.position.set(x, y, z);
-    scene.add(mesh);
-    smokeParticles.push({ mesh, life: 0, maxLife: 1.1 });
-  }
-
-  function updateSmoke(delta) {
-    for (let i = smokeParticles.length - 1; i >= 0; i--) {
-      const s = smokeParticles[i];
-      s.life += delta;
-      const t = s.life / s.maxLife;
-      s.mesh.position.y += delta * 0.5;
-      s.mesh.scale.setScalar(1 + t * 1.8);
-      s.mesh.material.opacity = 0.35 * (1 - t);
-      if (t >= 1) {
-        scene.remove(s.mesh);
-        s.mesh.material.dispose();
-        smokeParticles.splice(i, 1);
-      }
-    }
-  }
-
-  // --- Trafik ışıklarını döngüsel olarak yeşil/sarı/kırmızı değiştir ---
-  function updateTrafficLights(delta, elapsed) {
-    trafficLights.forEach((tl) => {
-      const cycle = (elapsed + tl.phase) % 6; // 6 saniyelik döngü: 3sn yeşil, 1sn sarı, 2sn kırmızı
-      let activeIdx; // 0=kırmızı,1=sarı,2=yeşil
-      if (cycle < 3) activeIdx = 2;
-      else if (cycle < 4) activeIdx = 1;
-      else activeIdx = 0;
-
-      tl.lights.forEach((l, idx) => {
-        if (idx === activeIdx) {
-          l.mesh.material.color.setHex(l.color);
-          l.mesh.material.emissive.setHex(l.color);
-          l.mesh.material.emissiveIntensity = 0.8;
-        } else {
-          l.mesh.material.color.setHex(0x330000);
-          l.mesh.material.emissive.setHex(0x000000);
-          l.mesh.material.emissiveIntensity = 0;
-        }
-      });
-    });
-  }
-
-  // Sekme kapanınca kendi kaydımızı silelim
   window.addEventListener("beforeunload", () => {
     if (myPlayerId) {
-      // beforeunload içinde async garanti çalışmayabilir ama deneriz
       deleteDoc(doc(playersCol, myPlayerId));
     }
   });
+
+  // ---------------------------------------------------------
+  // CHAT SİSTEMİ (Firestore üzerinden)
+  // ---------------------------------------------------------
+  const chatMessagesEl = document.getElementById("chatMessages");
+  const chatInputEl = document.getElementById("chatInput");
+  const chatSendBtnEl = document.getElementById("chatSendBtn");
+
+  function sendChatMessage() {
+    const text = chatInputEl.value.trim();
+    if (!text || !myPlayerId) return;
+    chatInputEl.value = "";
+    addDoc(chatCol, {
+      name: myPlayerName,
+      text: text.slice(0, 120),
+      createdAt: serverTimestamp()
+    }).catch(err => dlog("CHAT YAZMA HATASI: " + err.code + " - " + err.message));
+  }
+
+  chatSendBtnEl.addEventListener("click", sendChatMessage);
+  chatInputEl.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    if (e.key === "Enter") sendChatMessage();
+  });
+
+  function listenChat() {
+    const chatQuery = query(chatCol, orderBy("createdAt", "desc"), limit(30));
+    onSnapshot(chatQuery, (snapshot) => {
+      const msgs = [];
+      snapshot.forEach((docSnap) => msgs.push(docSnap.data()));
+      msgs.reverse();
+
+      chatMessagesEl.innerHTML = "";
+      msgs.forEach((m) => {
+        const line = document.createElement("div");
+        const nameSpan = document.createElement("b");
+        nameSpan.textContent = (m.name || "Oyuncu") + ": ";
+        line.appendChild(nameSpan);
+        line.appendChild(document.createTextNode(m.text || ""));
+        chatMessagesEl.appendChild(line);
+      });
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }, (err) => {
+      dlog("CHAT DİNLEME HATASI: " + err.code + " - " + err.message);
+    });
+  }
 
   // ---------------------------------------------------------
   // OYUNA KATILMA EKRANI
@@ -1453,68 +707,15 @@
   }
 
   // ---------------------------------------------------------
-  // CHAT SİSTEMİ (Firestore üzerinden)
-  // ---------------------------------------------------------
-  const chatCol = collection(db, "rooms", ROOM_ID, "chat");
-  const chatMessagesEl = document.getElementById("chatMessages");
-  const chatInputEl = document.getElementById("chatInput");
-  const chatSendBtnEl = document.getElementById("chatSendBtn");
-
-  function sendChatMessage() {
-    const text = chatInputEl.value.trim();
-    if (!text || !myPlayerId) return;
-    chatInputEl.value = "";
-    addDoc(chatCol, {
-      name: myPlayerName,
-      text: text.slice(0, 120),
-      createdAt: serverTimestamp()
-    }).catch(err => dlog("CHAT YAZMA HATASI: " + err.code + " - " + err.message));
-  }
-
-  chatSendBtnEl.addEventListener("click", sendChatMessage);
-  chatInputEl.addEventListener("keydown", (e) => {
-    e.stopPropagation(); // oyun kontrollerine (WASD) sızmasın
-    if (e.key === "Enter") sendChatMessage();
-  });
-
-  function listenChat() {
-    const chatQuery = query(chatCol, orderBy("createdAt", "desc"), limit(30));
-    onSnapshot(chatQuery, (snapshot) => {
-      const msgs = [];
-      snapshot.forEach((docSnap) => msgs.push(docSnap.data()));
-      msgs.reverse(); // eskiden yeniye sırala
-
-      chatMessagesEl.innerHTML = "";
-      msgs.forEach((m) => {
-        const line = document.createElement("div");
-        const nameSpan = document.createElement("b");
-        nameSpan.textContent = (m.name || "Oyuncu") + ": ";
-        line.appendChild(nameSpan);
-        line.appendChild(document.createTextNode(m.text || ""));
-        chatMessagesEl.appendChild(line);
-      });
-      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-    }, (err) => {
-      dlog("CHAT DİNLEME HATASI: " + err.code + " - " + err.message);
-    });
-  }
-
-  // ---------------------------------------------------------
   // ANA DÖNGÜ
   // ---------------------------------------------------------
   const clock = new THREE.Clock();
-  let elapsedTime = 0;
   function animate() {
     requestAnimationFrame(animate);
     const delta = Math.min(clock.getDelta(), 0.1);
-    elapsedTime += delta;
 
     updateLocalPlayer(delta);
     updateOtherPlayers(delta);
-    updatePedestrians(delta);
-    updateCars(delta);
-    updateSmoke(delta);
-    updateTrafficLights(delta, elapsedTime);
     sendMyPosition();
 
     renderer.render(scene, camera);
