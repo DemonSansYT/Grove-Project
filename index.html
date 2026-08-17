@@ -14,9 +14,44 @@
   }
   canvas { display: block; }
 
-  #hud {
+  #clockPanel {
     position: fixed;
     top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 8px 12px;
+    z-index: 10;
+    width: 130px;
+  }
+  #clockDigits {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #6dffb0;
+    text-shadow: 0 0 6px rgba(109,255,176,0.6);
+    text-align: center;
+  }
+  #healthBarOuter {
+    margin-top: 6px;
+    width: 100%;
+    height: 10px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  #healthBarInner {
+    height: 100%;
+    width: 100%;
+    background: #4CAF50;
+    transition: width 0.2s, background 0.2s;
+  }
+
+  #hud {
+    position: fixed;
+    top: 88px;
     left: 10px;
     color: #fff;
     background: rgba(0,0,0,0.5);
@@ -85,7 +120,7 @@
   /* --- Chat kutusu --- */
   #chatBox {
     position: fixed;
-    top: 195px;
+    top: 273px;
     left: 10px;
     width: 260px;
     max-width: calc(100vw - 20px);
@@ -182,7 +217,7 @@
   }
   #leashControl {
     position: fixed;
-    top: 130px;
+    top: 208px;
     left: 10px;
     z-index: 10;
     color: #fff;
@@ -193,6 +228,7 @@
     display: none;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
   #leashControl button {
     width: 26px;
@@ -202,6 +238,17 @@
     background: #4CAF50;
     color: #fff;
     font-size: 15px;
+    font-weight: bold;
+  }
+  #zapBtn {
+    width: auto !important;
+    padding: 0 10px;
+    height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: #e0a030 !important;
+    color: #fff;
+    font-size: 12px;
     font-weight: bold;
   }
 
@@ -253,6 +300,11 @@
 <button id="debugToggleBtn" title="Debug konsolu">🐞</button>
 <div id="debugPanel"></div>
 
+<div id="clockPanel">
+  <div id="clockDigits">09:30</div>
+  <div id="healthBarOuter"><div id="healthBarInner"></div></div>
+</div>
+
 <div id="chatBox">
   <div id="chatMessages"></div>
   <div id="chatInputRow">
@@ -265,14 +317,15 @@
   <h2>Grove Online - Prototip</h2>
   <div id="characterSelect">
     <div class="charOption selected" data-type="human"><span class="charIcon">🧍</span>İnsan</div>
-    <div class="charOption" data-type="dog"><span class="charIcon">🐕</span>Köpek</div>
+    <div class="charOption" data-type="cat"><span class="charIcon">🐱</span>Kedi</div>
   </div>
   <input type="text" id="playerNameInput" placeholder="İsmini yaz" maxlength="12">
   <button id="joinBtn">Katıl</button>
 </div>
 
 <div id="leashControl">
-  🦮 Tasma: <button id="leashMinus">-</button> <span id="leashValue">4</span>m <button id="leashPlus">+</button>
+  🔗 Tasma: <button id="leashMinus">-</button> <span id="leashValue">4</span>m <button id="leashPlus">+</button>
+  <button id="zapBtn">⚡ Şok Ver</button>
 </div>
 
 <div id="hud" style="display:none;">
@@ -402,13 +455,16 @@
 
   // Bir yol segmenti (asfalt + iki yanda yükseltilmiş kaldırım + beyaz kesikli orta çizgi) çizer.
   // x1,z1 -> x2,z2 sadece X ya da sadece Z ekseninde değişebilir (eksene hizalı).
-  function addStraightRoad(x1, z1, x2, z2) {
+  function addStraightRoad(x1, z1, x2, z2, shrinkStart, shrinkEnd) {
+    shrinkStart = shrinkStart || 0;
+    shrinkEnd = shrinkEnd || 0;
     const horizontal = z1 === z2;
     const midX = (x1 + x2) / 2, midZ = (z1 + z2) / 2;
     const len = horizontal ? Math.abs(x2 - x1) : Math.abs(z2 - z1);
     if (len < 0.01) return;
+    const dirSign = horizontal ? Math.sign(x2 - x1) : Math.sign(z2 - z1);
 
-    // Asfalt
+    // Asfalt - tam uzunlukta, düğüm merkezine kadar (boşluk kalmasın)
     const asphalt = new THREE.Mesh(
       new THREE.PlaneGeometry(horizontal ? len : ROAD_WIDTH, horizontal ? ROAD_WIDTH : len),
       asphaltMat
@@ -418,22 +474,28 @@
     asphalt.receiveShadow = true;
     cityGroup.add(asphalt);
 
-    // Kaldırımlar (asfalttan biraz yüksekte, iki kenarda) - köşelerde birleşsin diye biraz uzatılmış
-    const swLen = len + SIDEWALK_WIDTH;
-    const offset = ROAD_WIDTH / 2 + SIDEWALK_WIDTH / 2;
-    [-1, 1].forEach((side) => {
-      const geo = new THREE.BoxGeometry(
-        horizontal ? swLen : SIDEWALK_WIDTH,
-        CURB_HEIGHT,
-        horizontal ? SIDEWALK_WIDTH : swLen
-      );
-      const sw = new THREE.Mesh(geo, sidewalkMat);
-      if (horizontal) sw.position.set(midX, CURB_HEIGHT / 2 + 0.02, midZ + side * offset);
-      else sw.position.set(midX + side * offset, CURB_HEIGHT / 2 + 0.02, midZ);
-      sw.receiveShadow = true;
-      sw.castShadow = true;
-      cityGroup.add(sw);
-    });
+    // Kaldırımlar - kavşaklarda çapraz yoldaki asfaltın üstüne binmesin diye
+    // her iki uçta da (varsa) kavşak payı kadar içeri çekiliyor
+    const swLen = len - shrinkStart - shrinkEnd;
+    if (swLen > 0.1) {
+      const localMid = (shrinkStart + (len - shrinkEnd)) / 2; // segment başından itibaren
+      const swMidX = horizontal ? x1 + dirSign * localMid : midX;
+      const swMidZ = horizontal ? midZ : z1 + dirSign * localMid;
+      const offset = ROAD_WIDTH / 2 + SIDEWALK_WIDTH / 2;
+      [-1, 1].forEach((side) => {
+        const geo = new THREE.BoxGeometry(
+          horizontal ? swLen : SIDEWALK_WIDTH,
+          CURB_HEIGHT,
+          horizontal ? SIDEWALK_WIDTH : swLen
+        );
+        const sw = new THREE.Mesh(geo, sidewalkMat);
+        if (horizontal) sw.position.set(swMidX, CURB_HEIGHT / 2 + 0.02, swMidZ + side * offset);
+        else sw.position.set(swMidX + side * offset, CURB_HEIGHT / 2 + 0.02, swMidZ);
+        sw.receiveShadow = true;
+        sw.castShadow = true;
+        cityGroup.add(sw);
+      });
+    }
 
     // Beyaz kesikli orta çizgi - GERÇEK GEOMETRİ, doku değil
     const dashLen = 1.6, gapLen = 1.4, dashW = 0.18;
@@ -448,6 +510,18 @@
       dash.position.set(midX + (horizontal ? t : 0), 0.035, midZ + (horizontal ? 0 : t));
       cityGroup.add(dash);
     }
+  }
+
+  // Kavşak/dönüş noktalarını yuvarlak asfaltla doldurup dönüşleri yumuşatır
+  function addJunctionRound(x, z) {
+    const circle = new THREE.Mesh(
+      new THREE.CircleGeometry(ROAD_WIDTH / 2, 20),
+      asphaltMat
+    );
+    circle.rotation.x = -Math.PI / 2;
+    circle.position.set(x, 0.021, z);
+    circle.receiveShadow = true;
+    cityGroup.add(circle);
   }
 
   // Çıkmaz sokak ucu: kısa bir "kütük" yol uzantısı + ucuna kapatan kaldırım
@@ -536,10 +610,21 @@
     (adjList[kb] = adjList[kb] || []).push([ax, az]);
   });
 
-  // Geometriyi inşa et
+  // Geometriyi inşa et - kavşaklarda kaldırımlar çapraz asfalta binmesin diye içeri çekilir
   acceptedEdges.forEach(([ax, az, bx, bz]) => {
-    addStraightRoad(nodeWorldX(ax), nodeWorldZ(az), nodeWorldX(bx), nodeWorldZ(bz));
+    const shrinkA = (degree[keyOf(ax, az)] || 0) >= 2 ? ROAD_WIDTH / 2 : 0;
+    const shrinkB = (degree[keyOf(bx, bz)] || 0) >= 2 ? ROAD_WIDTH / 2 : 0;
+    addStraightRoad(nodeWorldX(ax), nodeWorldZ(az), nodeWorldX(bx), nodeWorldZ(bz), shrinkA, shrinkB);
   });
+
+  // Kavşak noktalarını yuvarlak asfaltla doldur - dönüşler sert değil yumuşak hissettirsin
+  for (let gx = 0; gx < GRID_N; gx++) {
+    for (let gz = 0; gz < GRID_N; gz++) {
+      if ((degree[keyOf(gx, gz)] || 0) >= 2) {
+        addJunctionRound(nodeWorldX(gx), nodeWorldZ(gz));
+      }
+    }
+  }
 
   // Çıkmaz sokakları (derece=1) kaldırımla kapat - şehir sınırı "yumuşak" bitsin
   for (let gx = 0; gx < GRID_N; gx++) {
@@ -580,49 +665,70 @@
     return group;
   }
 
-  function createDogMesh(color) {
+  function createCatMesh(color) {
     const group = new THREE.Group();
-    const furColor = color || 0x8a5a3a;
+    const furColor = color || 0xd88a3a;
     const furMat = new THREE.MeshStandardMaterial({ color: furColor });
 
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.5), furMat);
-    body.position.y = 0.4;
+    // Model, hareket yönü ile tutarlı olsun diye "önü" +Z eksenine bakacak şekilde kuruldu
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.95), furMat);
+    body.position.y = 0.32;
     body.castShadow = true;
     group.add(body);
 
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), furMat);
-    head.position.set(0.65, 0.55, 0);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.32, 0.32), furMat);
+    head.position.set(0, 0.5, 0.58);
     head.castShadow = true;
     group.add(head);
 
-    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.18, 0.2), new THREE.MeshStandardMaterial({ color: 0x2e2018 }));
-    snout.position.set(0.9, 0.48, 0);
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.14), new THREE.MeshStandardMaterial({ color: 0xffe4c4 }));
+    snout.position.set(0, 0.44, 0.78);
     group.add(snout);
 
-    [-0.14, 0.14].forEach((oz) => {
-      const ear = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.08), furMat);
-      ear.position.set(0.68, 0.78, oz * 1.5);
-      ear.rotation.z = oz > 0 ? 0.35 : -0.35;
+    // Sivri kedi kulakları
+    [-0.1, 0.1].forEach((ox) => {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.18, 4), furMat);
+      ear.position.set(ox, 0.7, 0.55);
+      ear.rotation.y = Math.PI / 4;
       group.add(ear);
     });
 
-    [[-0.4, -0.2], [-0.4, 0.2], [0.4, -0.2], [0.4, 0.2]].forEach(([lx, lz]) => {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.4, 6), furMat);
-      leg.position.set(lx, 0.2, lz);
+    // Bacaklar (ön-arka, sol-sağ)
+    [[-0.15, -0.32], [0.15, -0.32], [-0.15, 0.32], [0.15, 0.32]].forEach(([lx, lz]) => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.32, 6), furMat);
+      leg.position.set(lx, 0.16, lz);
       leg.castShadow = true;
       group.add(leg);
     });
 
-    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.03, 0.5, 6), furMat);
-    tail.position.set(-0.62, 0.55, 0);
-    tail.rotation.z = Math.PI / 3.2;
+    // İnce, uzun kedi kuyruğu - geriye ve yukarı kıvrık
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.02, 0.55, 6), furMat);
+    tail.position.set(0, 0.5, -0.55);
+    tail.rotation.x = -Math.PI / 3;
     group.add(tail);
 
+    // Dikenli tasma: boyunda halka + etrafında metalik dikenler
+    const collarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.035, 6, 12), collarMat);
+    collar.position.set(0, 0.42, 0.4);
+    group.add(collar);
+
+    const spikeMat = new THREE.MeshStandardMaterial({ color: 0xc8c8c8, metalness: 0.6, roughness: 0.3 });
+    const spikeCount = 8;
+    for (let i = 0; i < spikeCount; i++) {
+      const ang = (i / spikeCount) * Math.PI * 2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.08, 5), spikeMat);
+      spike.position.set(Math.cos(ang) * 0.19, Math.sin(ang) * 0.19 + 0.42, 0.4);
+      spike.rotation.z = ang - Math.PI / 2;
+      group.add(spike);
+    }
+
+    group.userData.collarWorldOffset = new THREE.Vector3(0, 0.42, 0.4);
     return group;
   }
 
   function createCharacterMesh(type, color) {
-    return type === "dog" ? createDogMesh(color) : createPlayerMesh(color);
+    return type === "cat" ? createCatMesh(color) : createPlayerMesh(color);
   }
 
   const myColor = Math.floor(Math.random() * 0xffffff);
@@ -829,11 +935,22 @@
   });
 
   // Tasma çizgisi (insan-köpek arasında görsel bağ)
-  const leashLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-  const leashLineMat = new THREE.LineBasicMaterial({ color: 0x5a3a24 });
-  const leashLine = new THREE.Line(leashLineGeo, leashLineMat);
-  leashLine.visible = false;
-  scene.add(leashLine);
+  // Tasma - gerçek geometri (ince silindir), görünürlüğü artırmak için Line yerine mesh kullanılıyor
+  const leashGeo = new THREE.CylinderGeometry(0.045, 0.045, 1, 6);
+  const leashMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1a });
+  const leashMesh = new THREE.Mesh(leashGeo, leashMat);
+  leashMesh.visible = false;
+  scene.add(leashMesh);
+
+  function stretchLeashBetween(pointA, pointB) {
+    const dir = new THREE.Vector3().subVectors(pointB, pointA);
+    const len = dir.length();
+    if (len < 0.01) { leashMesh.visible = false; return; }
+    leashMesh.visible = true;
+    leashMesh.position.copy(pointA).addScaledVector(dir, 0.5);
+    leashMesh.scale.set(1, len, 1);
+    leashMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  }
 
   function findNearestOfType(type) {
     let nearest = null, nearestDist = Infinity;
@@ -847,7 +964,7 @@
   }
 
   function updateLeash() {
-    if (myPlayerType === "dog") {
+    if (myPlayerType === "cat") {
       const owner = findNearestOfType("human");
       if (owner) {
         const leashLen = owner.leashLength || 4;
@@ -859,23 +976,79 @@
           myMesh.position.x = owner.mesh.position.x + dx * scale;
           myMesh.position.z = owner.mesh.position.z + dz * scale;
         }
-        leashLine.visible = true;
-        const pts = [myMesh.position.clone().add(new THREE.Vector3(0, 0.5, 0)), owner.mesh.position.clone().add(new THREE.Vector3(0, 1.2, 0))];
-        leashLine.geometry.setFromPoints(pts);
+        stretchLeashBetween(
+          myMesh.position.clone().add(new THREE.Vector3(0, 0.42, 0)),
+          owner.mesh.position.clone().add(new THREE.Vector3(0, 1.15, 0))
+        );
       } else {
-        leashLine.visible = false;
+        leashMesh.visible = false;
       }
     } else if (myPlayerType === "human") {
-      const pet = findNearestOfType("dog");
+      const pet = findNearestOfType("cat");
       if (pet) {
-        leashLine.visible = true;
-        const pts = [myMesh.position.clone().add(new THREE.Vector3(0, 1.2, 0)), pet.mesh.position.clone().add(new THREE.Vector3(0, 0.5, 0))];
-        leashLine.geometry.setFromPoints(pts);
+        stretchLeashBetween(
+          myMesh.position.clone().add(new THREE.Vector3(0, 1.15, 0)),
+          pet.mesh.position.clone().add(new THREE.Vector3(0, 0.42, 0))
+        );
       } else {
-        leashLine.visible = false;
+        leashMesh.visible = false;
       }
     }
   }
+
+  // ---------------------------------------------------------
+  // OYUN İÇİ SAAT (dijital gösterge, sol üst)
+  // ---------------------------------------------------------
+  let gameHours = 9.5;
+  const DAY_LENGTH_SECONDS = 480; // 8 dakika = 1 oyun günü
+  const clockDigitsEl = document.getElementById("clockDigits");
+
+  function updateClock(delta) {
+    gameHours += (delta / DAY_LENGTH_SECONDS) * 24;
+    if (gameHours >= 24) gameHours -= 24;
+    const hh = Math.floor(gameHours);
+    const mm = Math.floor((gameHours - hh) * 60);
+    clockDigitsEl.textContent = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+  }
+
+  // ---------------------------------------------------------
+  // CAN SİSTEMİ + ELEKTRİK ŞOKU (insan kediye şok verebilir)
+  // ---------------------------------------------------------
+  let myHealth = 100;
+  const healthBarInner = document.getElementById("healthBarInner");
+  function updateHealthBar() {
+    healthBarInner.style.width = Math.max(0, myHealth) + "%";
+    healthBarInner.style.background = myHealth > 50 ? "#4CAF50" : myHealth > 20 ? "#e0a030" : "#e03030";
+  }
+  updateHealthBar();
+
+  const eventsCol = collection(db, "rooms", ROOM_ID, "events");
+  let eventsReady = false;
+
+  function listenShockEvents() {
+    onSnapshot(eventsCol, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type !== "added") return;
+        if (!eventsReady) return; // ilk yüklemede eski olayları tekrar işleme
+        const data = change.doc.data();
+        if (data.type === "shock" && data.targetId === myPlayerId && myPlayerType === "cat") {
+          myHealth = Math.max(0, myHealth - 15);
+          updateHealthBar();
+          dlog("Şok aldın! Can: " + myHealth);
+        }
+      });
+      eventsReady = true;
+    }, (err) => dlog("EVENTS HATASI: " + err.code + " - " + err.message));
+  }
+
+  document.getElementById("zapBtn").addEventListener("click", () => {
+    const pet = findNearestOfType("cat");
+    if (!pet) { dlog("Yakında kedi yok"); return; }
+    const dist = myMesh.position.distanceTo(pet.mesh.position);
+    if (dist > (myLeashLength + 2)) { dlog("Kedi çok uzakta, şok veremezsin"); return; }
+    addDoc(eventsCol, { type: "shock", targetId: pet.id, ts: serverTimestamp() })
+      .catch(err => dlog("ŞOK HATASI: " + err.code + " - " + err.message));
+  });
 
   let lastSentTime = 0;
   const SEND_INTERVAL = 100;
@@ -891,6 +1064,7 @@
       color: myColor,
       type: myPlayerType,
       leashLength: myLeashLength,
+      health: myHealth,
       x: myMesh.position.x,
       y: myMesh.position.y,
       z: myMesh.position.z,
@@ -940,6 +1114,7 @@
           const mesh = createCharacterMesh(data.type || "human", data.color || 0xff0000);
           scene.add(mesh);
           otherPlayers[id] = {
+            id,
             mesh,
             type: data.type || "human",
             leashLength: data.leashLength || 4,
@@ -1059,7 +1234,7 @@
     document.getElementById("nameEntry").style.display = "none";
     document.getElementById("hud").style.display = "block";
     document.getElementById("chatBox").style.display = "flex";
-    document.getElementById("myName").textContent = myPlayerName + (myPlayerType === "dog" ? " 🐕" : " 🧍");
+    document.getElementById("myName").textContent = myPlayerName + (myPlayerType === "cat" ? " 🐱" : " 🧍");
     if (myPlayerType === "human") {
       document.getElementById("leashControl").style.display = "flex";
     }
@@ -1067,6 +1242,7 @@
 
     listenOtherPlayers();
     listenChat();
+    listenShockEvents();
     animate();
   }
 
@@ -1081,6 +1257,7 @@
     updateLocalPlayer(delta);
     updateOtherPlayers(delta);
     updateLeash();
+    updateClock(delta);
     sendMyPosition();
 
     renderer.render(scene, camera);
