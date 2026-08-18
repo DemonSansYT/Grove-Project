@@ -14,9 +14,42 @@
   }
   canvas { display: block; }
 
-  #hud {
+  #clockPanel {
     position: fixed;
     top: 10px;
+    left: 10px;
+    z-index: 10;
+    width: 130px;
+  }
+  #clockDigits {
+    font-family: 'Courier New', monospace;
+    font-size: 30px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #ffffff;
+    -webkit-text-stroke: 2px #000000;
+    paint-order: stroke fill;
+    text-align: left;
+  }
+  #healthBarOuter {
+    margin-top: 4px;
+    width: 100px;
+    height: 10px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(0,0,0,0.6);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  #healthBarInner {
+    height: 100%;
+    width: 100%;
+    background: #4CAF50;
+    transition: width 0.2s, background 0.2s;
+  }
+
+  #hud {
+    position: fixed;
+    top: 88px;
     left: 10px;
     color: #fff;
     background: rgba(0,0,0,0.5);
@@ -85,7 +118,7 @@
   /* --- Chat kutusu --- */
   #chatBox {
     position: fixed;
-    top: 195px;
+    top: 273px;
     left: 10px;
     width: 260px;
     max-width: calc(100vw - 20px);
@@ -182,7 +215,7 @@
   }
   #leashControl {
     position: fixed;
-    top: 130px;
+    top: 208px;
     left: 10px;
     z-index: 10;
     color: #fff;
@@ -193,6 +226,7 @@
     display: none;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
   #leashControl button {
     width: 26px;
@@ -203,6 +237,23 @@
     color: #fff;
     font-size: 15px;
     font-weight: bold;
+  }
+  #zapBtn {
+    position: fixed;
+    right: 30px;
+    bottom: 150px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(224,160,48,0.35);
+    border: 2px solid rgba(255,200,80,0.7);
+    color: #fff;
+    font-size: 26px;
+    font-weight: bold;
+    z-index: 20;
+    display: none;
+    align-items: center;
+    justify-content: center;
   }
 
   /* --- Mobil Joystick --- */
@@ -253,6 +304,11 @@
 <button id="debugToggleBtn" title="Debug konsolu">🐞</button>
 <div id="debugPanel"></div>
 
+<div id="clockPanel">
+  <div id="clockDigits">09:30</div>
+  <div id="healthBarOuter"><div id="healthBarInner"></div></div>
+</div>
+
 <div id="chatBox">
   <div id="chatMessages"></div>
   <div id="chatInputRow">
@@ -265,14 +321,14 @@
   <h2>Grove Online - Prototip</h2>
   <div id="characterSelect">
     <div class="charOption selected" data-type="human"><span class="charIcon">🧍</span>İnsan</div>
-    <div class="charOption" data-type="dog"><span class="charIcon">🐕</span>Köpek</div>
+    <div class="charOption" data-type="cat"><span class="charIcon">🐱</span>Kedi</div>
   </div>
   <input type="text" id="playerNameInput" placeholder="İsmini yaz" maxlength="12">
   <button id="joinBtn">Katıl</button>
 </div>
 
 <div id="leashControl">
-  🦮 Tasma: <button id="leashMinus">-</button> <span id="leashValue">4</span>m <button id="leashPlus">+</button>
+  🔗 Tasma: <button id="leashMinus">-</button> <span id="leashValue">4</span>m <button id="leashPlus">+</button>
 </div>
 
 <div id="hud" style="display:none;">
@@ -283,6 +339,7 @@
 
 <div id="joystickZone"><div id="joystickStick"></div></div>
 <button id="jumpBtn">ZIPLA</button>
+<button id="zapBtn">⚡</button>
 
 <script type="module">
   // ---------------------------------------------------------
@@ -384,12 +441,16 @@
   // ---------------------------------------------------------
   const PLAYER_HEIGHT = 2.2;
   const ROAD_WIDTH = PLAYER_HEIGHT * 3.2;      // ~7
-  const SIDEWALK_WIDTH = PLAYER_HEIGHT * 0.75; // ~1.65
+  const SIDEWALK_WIDTH = PLAYER_HEIGHT * 1.0;  // ~2.2 - genişletildi
   const CURB_HEIGHT = 0.18;
   const NODE_SPACING = ROAD_WIDTH + 14;        // düğümler arası mesafe
   const GRID_N = 6;                            // 6x6 düğüm ızgarası - küçük şehir
 
   const cityGroup = new THREE.Group();
+  const collidables = []; // { minX, maxX, minZ, maxZ } - oyuncu/kedi çarpışma listesi
+  function registerCollider(x, z, w, d) {
+    collidables.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
+  }
   scene.add(cityGroup);
 
   const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2e });
@@ -402,13 +463,16 @@
 
   // Bir yol segmenti (asfalt + iki yanda yükseltilmiş kaldırım + beyaz kesikli orta çizgi) çizer.
   // x1,z1 -> x2,z2 sadece X ya da sadece Z ekseninde değişebilir (eksene hizalı).
-  function addStraightRoad(x1, z1, x2, z2) {
+  function addStraightRoad(x1, z1, x2, z2, shrinkStart, shrinkEnd) {
+    shrinkStart = shrinkStart || 0;
+    shrinkEnd = shrinkEnd || 0;
     const horizontal = z1 === z2;
     const midX = (x1 + x2) / 2, midZ = (z1 + z2) / 2;
     const len = horizontal ? Math.abs(x2 - x1) : Math.abs(z2 - z1);
     if (len < 0.01) return;
+    const dirSign = horizontal ? Math.sign(x2 - x1) : Math.sign(z2 - z1);
 
-    // Asfalt
+    // Asfalt - tam uzunlukta, düğüm merkezine kadar (boşluk kalmasın)
     const asphalt = new THREE.Mesh(
       new THREE.PlaneGeometry(horizontal ? len : ROAD_WIDTH, horizontal ? ROAD_WIDTH : len),
       asphaltMat
@@ -418,22 +482,28 @@
     asphalt.receiveShadow = true;
     cityGroup.add(asphalt);
 
-    // Kaldırımlar (asfalttan biraz yüksekte, iki kenarda) - köşelerde birleşsin diye biraz uzatılmış
-    const swLen = len + SIDEWALK_WIDTH;
-    const offset = ROAD_WIDTH / 2 + SIDEWALK_WIDTH / 2;
-    [-1, 1].forEach((side) => {
-      const geo = new THREE.BoxGeometry(
-        horizontal ? swLen : SIDEWALK_WIDTH,
-        CURB_HEIGHT,
-        horizontal ? SIDEWALK_WIDTH : swLen
-      );
-      const sw = new THREE.Mesh(geo, sidewalkMat);
-      if (horizontal) sw.position.set(midX, CURB_HEIGHT / 2 + 0.02, midZ + side * offset);
-      else sw.position.set(midX + side * offset, CURB_HEIGHT / 2 + 0.02, midZ);
-      sw.receiveShadow = true;
-      sw.castShadow = true;
-      cityGroup.add(sw);
-    });
+    // Kaldırımlar - kavşaklarda çapraz yoldaki asfaltın üstüne binmesin diye
+    // her iki uçta da (varsa) kavşak payı kadar içeri çekiliyor
+    const swLen = len - shrinkStart - shrinkEnd;
+    if (swLen > 0.1) {
+      const localMid = (shrinkStart + (len - shrinkEnd)) / 2; // segment başından itibaren
+      const swMidX = horizontal ? x1 + dirSign * localMid : midX;
+      const swMidZ = horizontal ? midZ : z1 + dirSign * localMid;
+      const offset = ROAD_WIDTH / 2 + SIDEWALK_WIDTH / 2;
+      [-1, 1].forEach((side) => {
+        const geo = new THREE.BoxGeometry(
+          horizontal ? swLen : SIDEWALK_WIDTH,
+          CURB_HEIGHT,
+          horizontal ? SIDEWALK_WIDTH : swLen
+        );
+        const sw = new THREE.Mesh(geo, sidewalkMat);
+        if (horizontal) sw.position.set(swMidX, CURB_HEIGHT / 2 + 0.02, swMidZ + side * offset);
+        else sw.position.set(swMidX + side * offset, CURB_HEIGHT / 2 + 0.02, swMidZ);
+        sw.receiveShadow = true;
+        sw.castShadow = true;
+        cityGroup.add(sw);
+      });
+    }
 
     // Beyaz kesikli orta çizgi - GERÇEK GEOMETRİ, doku değil
     const dashLen = 1.6, gapLen = 1.4, dashW = 0.18;
@@ -448,6 +518,54 @@
       dash.position.set(midX + (horizontal ? t : 0), 0.035, midZ + (horizontal ? 0 : t));
       cityGroup.add(dash);
     }
+  }
+
+  // Kavşak/dönüş noktalarını yuvarlak asfaltla doldurup dönüşleri yumuşatır
+  function addJunctionRound(x, z) {
+    const circle = new THREE.Mesh(
+      new THREE.CircleGeometry(ROAD_WIDTH / 2, 20),
+      asphaltMat
+    );
+    circle.rotation.x = -Math.PI / 2;
+    circle.position.set(x, 0.021, z);
+    circle.receiveShadow = true;
+    cityGroup.add(circle);
+  }
+
+  // Bir düğümün etrafında yol OLMAYAN kenarları kaldırımla kapat
+  // (yol sadece bazı yönlerde varsa, boş kalan kenarlar/köşeler kaldırımsız kalmasın)
+  function addOpenEdgeSidewalks(gx, gz, connDirs) {
+    const nx = nodeWorldX(gx), nz = nodeWorldZ(gz);
+    const r = ROAD_WIDTH / 2;
+    const cardinals = { E: [1, 0], W: [-1, 0], S: [0, 1], N: [0, -1] };
+
+    Object.entries(cardinals).forEach(([dirName, [dx, dz]]) => {
+      if (connDirs.has(dirName)) return;
+      const capGeo = new THREE.BoxGeometry(
+        dx !== 0 ? SIDEWALK_WIDTH : ROAD_WIDTH,
+        CURB_HEIGHT,
+        dx !== 0 ? ROAD_WIDTH : SIDEWALK_WIDTH
+      );
+      const cap = new THREE.Mesh(capGeo, sidewalkMat);
+      cap.position.set(nx + dx * (r + SIDEWALK_WIDTH / 2), CURB_HEIGHT / 2 + 0.02, nz + dz * (r + SIDEWALK_WIDTH / 2));
+      cap.receiveShadow = true;
+      cityGroup.add(cap);
+    });
+
+    const diagonalCorners = [
+      { dirs: ["N", "E"], sx: 1, sz: -1 },
+      { dirs: ["N", "W"], sx: -1, sz: -1 },
+      { dirs: ["S", "E"], sx: 1, sz: 1 },
+      { dirs: ["S", "W"], sx: -1, sz: 1 }
+    ];
+    diagonalCorners.forEach(({ dirs, sx, sz }) => {
+      if (connDirs.has(dirs[0]) || connDirs.has(dirs[1])) return;
+      const off = r + SIDEWALK_WIDTH / 2;
+      const corner = new THREE.Mesh(new THREE.BoxGeometry(SIDEWALK_WIDTH, CURB_HEIGHT, SIDEWALK_WIDTH), sidewalkMat);
+      corner.position.set(nx + sx * off, CURB_HEIGHT / 2 + 0.02, nz + sz * off);
+      corner.receiveShadow = true;
+      cityGroup.add(corner);
+    });
   }
 
   // Çıkmaz sokak ucu: kısa bir "kütük" yol uzantısı + ucuna kapatan kaldırım
@@ -536,25 +654,194 @@
     (adjList[kb] = adjList[kb] || []).push([ax, az]);
   });
 
-  // Geometriyi inşa et
+  function getConnDirs(gx, gz) {
+    const set = new Set();
+    (adjList[keyOf(gx, gz)] || []).forEach(([ox, oz]) => {
+      if (ox === gx + 1) set.add("E");
+      if (ox === gx - 1) set.add("W");
+      if (oz === gz + 1) set.add("S");
+      if (oz === gz - 1) set.add("N");
+    });
+    return set;
+  }
+
+  // Geometriyi inşa et - kavşaklarda kaldırımlar çapraz asfalta binmesin diye içeri çekilir
   acceptedEdges.forEach(([ax, az, bx, bz]) => {
-    addStraightRoad(nodeWorldX(ax), nodeWorldZ(az), nodeWorldX(bx), nodeWorldZ(bz));
+    const shrinkA = (degree[keyOf(ax, az)] || 0) >= 2 ? ROAD_WIDTH / 2 : 0;
+    const shrinkB = (degree[keyOf(bx, bz)] || 0) >= 2 ? ROAD_WIDTH / 2 : 0;
+    addStraightRoad(nodeWorldX(ax), nodeWorldZ(az), nodeWorldX(bx), nodeWorldZ(bz), shrinkA, shrinkB);
   });
 
-  // Çıkmaz sokakları (derece=1) kaldırımla kapat - şehir sınırı "yumuşak" bitsin
+  const deadEndBuildingSpots = [];
+
+  // Kavşak noktalarını yuvarlak asfaltla doldur - dönüşler sert değil yumuşak hissettirsin
+  // Her düğümde yol olmayan kenarları da kaldırımla kapat
+  for (let gx = 0; gx < GRID_N; gx++) {
+    for (let gz = 0; gz < GRID_N; gz++) {
+      const deg = degree[keyOf(gx, gz)] || 0;
+      if (deg === 0) continue;
+      if (deg >= 2) addJunctionRound(nodeWorldX(gx), nodeWorldZ(gz));
+      addOpenEdgeSidewalks(gx, gz, getConnDirs(gx, gz));
+    }
+  }
+
+  // Çıkmaz sokakları (derece=1) kaldırımla kapat, ucuna bir bina koyarak gerçekten "çıkmaz" yap
   for (let gx = 0; gx < GRID_N; gx++) {
     for (let gz = 0; gz < GRID_N; gz++) {
       const k = keyOf(gx, gz);
       if ((degree[k] || 0) === 1) {
         const [nx2, nz2] = adjList[k][0];
         const dirX = Math.sign(gx - nx2), dirZ = Math.sign(gz - nz2);
-        addDeadEndCap(nodeWorldX(gx), nodeWorldZ(gz), dirX, dirZ);
+        const nx = nodeWorldX(gx), nz = nodeWorldZ(gz);
+        addDeadEndCap(nx, nz, dirX, dirZ);
+        // Çıkmazın ucunu kapatan bina
+        const capTipX = nx + dirX * (ROAD_WIDTH * 0.6 + SIDEWALK_WIDTH + 4);
+        const capTipZ = nz + dirZ * (ROAD_WIDTH * 0.6 + SIDEWALK_WIDTH + 4);
+        deadEndBuildingSpots.push([capTipX, capTipZ]);
       }
     }
   }
 
   const spawnX = nodeWorldX(centerGX), spawnZ = nodeWorldZ(centerGZ);
   dlog("Yol ağı üretildi: " + GRID_N + "x" + GRID_N + " düğüm, " + acceptedEdges.length + " yol segmenti");
+
+  // ---------------------------------------------------------
+  // BİNALAR (basit, çarpışmalı, kaldırımın biraz ötesine yerleştirilir)
+  // ---------------------------------------------------------
+  const BUILDING_COLORS = [0xd8a45a, 0xb5735a, 0x8a9a8f, 0xc9b458, 0x9aa7b5, 0xb08968, 0x7a8b6f];
+  const buildingWindowMat = new THREE.MeshStandardMaterial({ color: 0x1a2733, emissive: 0x2a3f55, emissiveIntensity: 0.15 });
+
+  function buildGenericBuilding(x, z, w, d) {
+    const floors = 2 + Math.floor(Math.random() * 4);
+    const floorH = PLAYER_HEIGHT * 1.5;
+    const h = floors * floorH;
+    const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color }));
+    body.position.set(x, h / 2, z);
+    body.castShadow = true;
+    body.receiveShadow = true;
+    cityGroup.add(body);
+
+    for (let f = 1; f < floors; f++) {
+      const stripY = f * floorH;
+      [[0, 1], [0, -1]].forEach(([sx, sz]) => {
+        const strip = new THREE.Mesh(
+          new THREE.BoxGeometry(sz !== 0 ? w * 0.85 : 0.05, floorH * 0.32, sz !== 0 ? 0.05 : d * 0.85),
+          buildingWindowMat
+        );
+        strip.position.set(x + sx * (w / 2 + 0.03), stripY, z + sz * (d / 2 + 0.03));
+        cityGroup.add(strip);
+      });
+    }
+
+    registerCollider(x, z, w, d);
+  }
+
+  // Yol segmentleri boyunca kaldırımın ötesine bina diz (asfalta/kaldırıma binmesin diye pay bırakılır)
+  acceptedEdges.forEach(([ax, az, bx, bz]) => {
+    const x1 = nodeWorldX(ax), z1 = nodeWorldZ(az), x2 = nodeWorldX(bx), z2 = nodeWorldZ(bz);
+    const horizontal = z1 === z2;
+    const len = horizontal ? Math.abs(x2 - x1) : Math.abs(z2 - z1);
+    const margin = ROAD_WIDTH * 1.3;
+    const usable = len - margin * 2;
+    if (usable < 6) return;
+
+    const dirSign = horizontal ? Math.sign(x2 - x1) : Math.sign(z2 - z1);
+    const perpOffset = ROAD_WIDTH / 2 + SIDEWALK_WIDTH + 3.2;
+    const spacing = 9 + Math.random() * 4;
+    const count = Math.floor(usable / spacing);
+
+    for (let i = 0; i < count; i++) {
+      if (Math.random() < 0.35) continue; // çeşitlilik için bazı yerler boş kalsın
+      const distFromStart = margin + spacing * (i + 0.5);
+      [-1, 1].forEach((side) => {
+        if (Math.random() < 0.5) return;
+        const bw = 5 + Math.random() * 3, bd = 5 + Math.random() * 3;
+        let bx, bz;
+        if (horizontal) { bx = x1 + dirSign * distFromStart; bz = z1 + side * perpOffset; }
+        else { bx = x1 + side * perpOffset; bz = z1 + dirSign * distFromStart; }
+        buildGenericBuilding(bx, bz, bw, bd);
+      });
+    }
+  });
+
+  // Çıkmaz sokakların ucuna bina koyarak gerçekten kapalı hissettir
+  deadEndBuildingSpots.forEach(([bx, bz]) => buildGenericBuilding(bx, bz, 7, 6));
+
+  // ---------------------------------------------------------
+  // PET SHOP - girilebilen tek dükkan (raflar + kasiyer)
+  // Yol ağından bağımsız, ızgara çizgilerinin tam ortasında güvenli bir noktaya konur
+  // ---------------------------------------------------------
+  function buildPetShop(x, z) {
+    const w = 9, d = 7, wallH = PLAYER_HEIGHT * 1.7, wallT = 0.3, doorW = 2.0;
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xdfc9a0 });
+    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x6b4a3a });
+
+    function wallBox(lx, lz, lw, ld) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(lw, wallH, ld), wallMat);
+      m.position.set(x + lx, wallH / 2, z + lz);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      cityGroup.add(m);
+      registerCollider(x + lx, z + lz, lw, ld);
+    }
+
+    wallBox(0, d / 2, w, wallT);            // arka duvar
+    wallBox(-w / 2, 0, wallT, d);           // sol duvar
+    wallBox(w / 2, 0, wallT, d);            // sağ duvar
+    const segW = (w - doorW) / 2;
+    wallBox(-(doorW / 2 + segW / 2), -d / 2, segW, wallT); // ön duvar sol parça
+    wallBox((doorW / 2 + segW / 2), -d / 2, segW, wallT);  // ön duvar sağ parça (ortada kapı boşluğu)
+
+    // Tabela
+    const sign = new THREE.Mesh(
+      new THREE.BoxGeometry(2.6, 0.6, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0xe08030, emissive: 0xe08030, emissiveIntensity: 0.25 })
+    );
+    sign.position.set(x, wallH + 0.4, z - d / 2 - 0.1);
+    cityGroup.add(sign);
+
+    // İç zemin
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(w - 0.4, d - 0.4),
+      new THREE.MeshStandardMaterial({ color: 0xf0e6d2 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(x, 0.03, z);
+    floor.receiveShadow = true;
+    cityGroup.add(floor);
+
+    // 4 raf
+    [[-w / 2 + 1.1, -d / 2 + 1.8], [-w / 2 + 1.1, 0], [-w / 2 + 1.1, d / 2 - 1.6], [w / 2 - 1.1, -d / 2 + 1.8]].forEach(([sx, sz]) => {
+      const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 1.8), shelfMat);
+      shelf.position.set(x + sx, 0.7, z + sz);
+      shelf.castShadow = true;
+      cityGroup.add(shelf);
+      registerCollider(x + sx, z + sz, 0.6, 1.8);
+      for (let i = 0; i < 3; i++) {
+        const item = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.3), new THREE.MeshStandardMaterial({ color: Math.floor(Math.random() * 0xffffff) }));
+        item.position.set(x + sx, 1.05, z + sz + (i - 1) * 0.55);
+        cityGroup.add(item);
+      }
+    });
+
+    // Kasiyer tezgahı + dekoratif kasiyer figürü
+    const counter = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 0.7), shelfMat);
+    counter.position.set(x, 0.5, z + d / 2 - 1.2);
+    counter.castShadow = true;
+    cityGroup.add(counter);
+    registerCollider(x, z + d / 2 - 1.2, 2.2, 0.7);
+
+    const cashier = createPlayerMesh(0x445566);
+    cashier.position.set(x, 0, z + d / 2 - 1.9);
+    cashier.rotation.y = Math.PI;
+    cityGroup.add(cashier);
+  }
+
+  // Grid çizgilerinin tam ortası, hangi yol ağı üretilirse üretilsin daima boş/güvenli bir nokta
+  const petShopX = spawnX + NODE_SPACING * 0.5;
+  const petShopZ = spawnZ - NODE_SPACING * 0.5;
+  buildPetShop(petShopX, petShopZ);
 
   // ---------------------------------------------------------
   // OYUNCU (kendi karakterin)
@@ -580,49 +867,70 @@
     return group;
   }
 
-  function createDogMesh(color) {
+  function createCatMesh(color) {
     const group = new THREE.Group();
-    const furColor = color || 0x8a5a3a;
+    const furColor = color || 0xd88a3a;
     const furMat = new THREE.MeshStandardMaterial({ color: furColor });
 
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.5), furMat);
-    body.position.y = 0.4;
+    // Model, hareket yönü ile tutarlı olsun diye "önü" +Z eksenine bakacak şekilde kuruldu
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.95), furMat);
+    body.position.y = 0.32;
     body.castShadow = true;
     group.add(body);
 
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), furMat);
-    head.position.set(0.65, 0.55, 0);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.32, 0.32), furMat);
+    head.position.set(0, 0.5, 0.58);
     head.castShadow = true;
     group.add(head);
 
-    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.18, 0.2), new THREE.MeshStandardMaterial({ color: 0x2e2018 }));
-    snout.position.set(0.9, 0.48, 0);
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.14), new THREE.MeshStandardMaterial({ color: 0xffe4c4 }));
+    snout.position.set(0, 0.44, 0.78);
     group.add(snout);
 
-    [-0.14, 0.14].forEach((oz) => {
-      const ear = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.08), furMat);
-      ear.position.set(0.68, 0.78, oz * 1.5);
-      ear.rotation.z = oz > 0 ? 0.35 : -0.35;
+    // Sivri kedi kulakları
+    [-0.1, 0.1].forEach((ox) => {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.18, 4), furMat);
+      ear.position.set(ox, 0.7, 0.55);
+      ear.rotation.y = Math.PI / 4;
       group.add(ear);
     });
 
-    [[-0.4, -0.2], [-0.4, 0.2], [0.4, -0.2], [0.4, 0.2]].forEach(([lx, lz]) => {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.4, 6), furMat);
-      leg.position.set(lx, 0.2, lz);
+    // Bacaklar (ön-arka, sol-sağ)
+    [[-0.15, -0.32], [0.15, -0.32], [-0.15, 0.32], [0.15, 0.32]].forEach(([lx, lz]) => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.32, 6), furMat);
+      leg.position.set(lx, 0.16, lz);
       leg.castShadow = true;
       group.add(leg);
     });
 
-    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.03, 0.5, 6), furMat);
-    tail.position.set(-0.62, 0.55, 0);
-    tail.rotation.z = Math.PI / 3.2;
+    // İnce, uzun kedi kuyruğu - geriye ve yukarı kıvrık
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.02, 0.55, 6), furMat);
+    tail.position.set(0, 0.5, -0.55);
+    tail.rotation.x = -Math.PI / 3;
     group.add(tail);
 
+    // Dikenli tasma: boyunda halka + etrafında metalik dikenler
+    const collarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.035, 6, 12), collarMat);
+    collar.position.set(0, 0.42, 0.4);
+    group.add(collar);
+
+    const spikeMat = new THREE.MeshStandardMaterial({ color: 0xc8c8c8, metalness: 0.6, roughness: 0.3 });
+    const spikeCount = 8;
+    for (let i = 0; i < spikeCount; i++) {
+      const ang = (i / spikeCount) * Math.PI * 2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.08, 5), spikeMat);
+      spike.position.set(Math.cos(ang) * 0.19, Math.sin(ang) * 0.19 + 0.42, 0.4);
+      spike.rotation.z = ang - Math.PI / 2;
+      group.add(spike);
+    }
+
+    group.userData.collarWorldOffset = new THREE.Vector3(0, 0.42, 0.4);
     return group;
   }
 
   function createCharacterMesh(type, color) {
-    return type === "dog" ? createDogMesh(color) : createPlayerMesh(color);
+    return type === "cat" ? createCatMesh(color) : createPlayerMesh(color);
   }
 
   const myColor = Math.floor(Math.random() * 0xffffff);
@@ -750,7 +1058,24 @@
   const jumpForce = 8;
   const gravity = -20;
 
+  const PLAYER_RADIUS = 0.4;
+  function collidesAt(x, z) {
+    for (let i = 0; i < collidables.length; i++) {
+      const c = collidables[i];
+      if (x + PLAYER_RADIUS > c.minX && x - PLAYER_RADIUS < c.maxX &&
+          z + PLAYER_RADIUS > c.minZ && z - PLAYER_RADIUS < c.maxZ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function updateLocalPlayer(delta) {
+    // Kedi bayılmışsa kendi kontrolü devre dışı - insan tarafından sürüklenir (updateLeash halleder)
+    if (myPlayerType === "cat" && isDowned) {
+      return;
+    }
+
     let dx = 0, dz = 0;
     if (keys["KeyW"]) dz -= 1;
     if (keys["KeyS"]) dz += 1;
@@ -776,9 +1101,12 @@
       const moveLen = Math.hypot(moveX, moveZ);
       if (moveLen > 0) {
         moveX /= moveLen; moveZ /= moveLen;
-        myMesh.position.x += moveX * moveSpeed * delta;
-        myMesh.position.z += moveZ * moveSpeed * delta;
         myMesh.rotation.y = Math.atan2(moveX, moveZ);
+
+        const nextX = myMesh.position.x + moveX * moveSpeed * delta;
+        const nextZ = myMesh.position.z + moveZ * moveSpeed * delta;
+        if (!collidesAt(nextX, myMesh.position.z)) myMesh.position.x = nextX;
+        if (!collidesAt(myMesh.position.x, nextZ)) myMesh.position.z = nextZ;
       }
     }
 
@@ -829,11 +1157,22 @@
   });
 
   // Tasma çizgisi (insan-köpek arasında görsel bağ)
-  const leashLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-  const leashLineMat = new THREE.LineBasicMaterial({ color: 0x5a3a24 });
-  const leashLine = new THREE.Line(leashLineGeo, leashLineMat);
-  leashLine.visible = false;
-  scene.add(leashLine);
+  // Tasma - gerçek geometri (ince silindir), görünürlüğü artırmak için Line yerine mesh kullanılıyor
+  const leashGeo = new THREE.CylinderGeometry(0.045, 0.045, 1, 6);
+  const leashMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1a });
+  const leashMesh = new THREE.Mesh(leashGeo, leashMat);
+  leashMesh.visible = false;
+  scene.add(leashMesh);
+
+  function stretchLeashBetween(pointA, pointB) {
+    const dir = new THREE.Vector3().subVectors(pointB, pointA);
+    const len = dir.length();
+    if (len < 0.01) { leashMesh.visible = false; return; }
+    leashMesh.visible = true;
+    leashMesh.position.copy(pointA).addScaledVector(dir, 0.5);
+    leashMesh.scale.set(1, len, 1);
+    leashMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  }
 
   function findNearestOfType(type) {
     let nearest = null, nearestDist = Infinity;
@@ -847,7 +1186,7 @@
   }
 
   function updateLeash() {
-    if (myPlayerType === "dog") {
+    if (myPlayerType === "cat") {
       const owner = findNearestOfType("human");
       if (owner) {
         const leashLen = owner.leashLength || 4;
@@ -859,23 +1198,143 @@
           myMesh.position.x = owner.mesh.position.x + dx * scale;
           myMesh.position.z = owner.mesh.position.z + dz * scale;
         }
-        leashLine.visible = true;
-        const pts = [myMesh.position.clone().add(new THREE.Vector3(0, 0.5, 0)), owner.mesh.position.clone().add(new THREE.Vector3(0, 1.2, 0))];
-        leashLine.geometry.setFromPoints(pts);
+        stretchLeashBetween(
+          myMesh.position.clone().add(new THREE.Vector3(0, 0.42, 0)),
+          owner.mesh.position.clone().add(new THREE.Vector3(0, 1.15, 0))
+        );
       } else {
-        leashLine.visible = false;
+        leashMesh.visible = false;
       }
     } else if (myPlayerType === "human") {
-      const pet = findNearestOfType("dog");
+      const pet = findNearestOfType("cat");
       if (pet) {
-        leashLine.visible = true;
-        const pts = [myMesh.position.clone().add(new THREE.Vector3(0, 1.2, 0)), pet.mesh.position.clone().add(new THREE.Vector3(0, 0.5, 0))];
-        leashLine.geometry.setFromPoints(pts);
+        stretchLeashBetween(
+          myMesh.position.clone().add(new THREE.Vector3(0, 1.15, 0)),
+          pet.mesh.position.clone().add(new THREE.Vector3(0, 0.42, 0))
+        );
       } else {
-        leashLine.visible = false;
+        leashMesh.visible = false;
       }
     }
   }
+
+  // ---------------------------------------------------------
+  // OYUN İÇİ SAAT + GECE-GÜNDÜZ DÖNGÜSÜ (dijital gösterge, sol üst)
+  // ---------------------------------------------------------
+  let gameHours = 9.5;
+  const DAY_LENGTH_SECONDS = 480; // 8 dakika = 1 oyun günü
+  const clockDigitsEl = document.getElementById("clockDigits");
+
+  const SKY_NIGHT = new THREE.Color(0x0a1128);
+  const SKY_DAWN = new THREE.Color(0xe8926a);
+  const SKY_DAY = new THREE.Color(0x87ceeb);
+  const SKY_DUSK = new THREE.Color(0xd9754f);
+  function lerpColor3(c1, c2, t) {
+    return c1.clone().lerp(c2, Math.max(0, Math.min(1, t)));
+  }
+
+  function updateClock(delta) {
+    gameHours += (delta / DAY_LENGTH_SECONDS) * 24;
+    if (gameHours >= 24) gameHours -= 24;
+    const hh = Math.floor(gameHours);
+    const mm = Math.floor((gameHours - hh) * 60);
+    clockDigitsEl.textContent = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+
+    // Gece-gündüz görsel geçişi
+    const h = gameHours;
+    let skyColor, sunIntensity, hemiIntensity;
+    if (h < 5) { skyColor = SKY_NIGHT; sunIntensity = 0.08; hemiIntensity = 0.3; }
+    else if (h < 7) { const t = (h - 5) / 2; skyColor = lerpColor3(SKY_NIGHT, SKY_DAWN, t); sunIntensity = 0.08 + t * 0.6; hemiIntensity = 0.3 + t * 0.5; }
+    else if (h < 9) { const t = (h - 7) / 2; skyColor = lerpColor3(SKY_DAWN, SKY_DAY, t); sunIntensity = 0.68 + t * 0.52; hemiIntensity = 0.8 + t * 0.4; }
+    else if (h < 17) { skyColor = SKY_DAY; sunIntensity = 1.2; hemiIntensity = 1.2; }
+    else if (h < 19) { const t = (h - 17) / 2; skyColor = lerpColor3(SKY_DAY, SKY_DUSK, t); sunIntensity = 1.2 - t * 0.55; hemiIntensity = 1.2 - t * 0.4; }
+    else if (h < 21) { const t = (h - 19) / 2; skyColor = lerpColor3(SKY_DUSK, SKY_NIGHT, t); sunIntensity = 0.65 - t * 0.57; hemiIntensity = 0.8 - t * 0.5; }
+    else { skyColor = SKY_NIGHT; sunIntensity = 0.08; hemiIntensity = 0.3; }
+
+    scene.background.copy(skyColor);
+    scene.fog.color.copy(skyColor);
+    sunLight.intensity = sunIntensity;
+    hemiLight.intensity = hemiIntensity;
+  }
+
+  // ---------------------------------------------------------
+  // CAN SİSTEMİ + ELEKTRİK ŞOKU (insan kediye şok verebilir)
+  // Can biterse kedi bir süre yan yatıp hareket edemez, insan bu sırada onu sürükleyebilir
+  // ---------------------------------------------------------
+  let myHealth = 100;
+  let isDowned = false;
+  let downedTimer = 0;
+  const DOWNED_DURATION = 8; // saniye
+  const healthBarInner = document.getElementById("healthBarInner");
+  function updateHealthBar() {
+    healthBarInner.style.width = Math.max(0, myHealth) + "%";
+    healthBarInner.style.background = myHealth > 50 ? "#4CAF50" : myHealth > 20 ? "#e0a030" : "#e03030";
+  }
+  updateHealthBar();
+
+  function goDown() {
+    if (isDowned) return;
+    isDowned = true;
+    downedTimer = DOWNED_DURATION;
+    myMesh.rotation.z = Math.PI / 2; // yan yat
+    dlog("Kedi bayıldı, " + DOWNED_DURATION + " saniye hareket edemez");
+  }
+
+  function updateDownedState(delta) {
+    if (myPlayerType !== "cat" || !isDowned) return;
+    downedTimer -= delta;
+
+    // İnsan yakındaysa (tasma sahibi) yerde yatarken onu sürükleyebilsin
+    const owner = findNearestOfType("human");
+    if (owner) {
+      const dx = myMesh.position.x - owner.mesh.position.x;
+      const dz = myMesh.position.z - owner.mesh.position.z;
+      const dist = Math.hypot(dx, dz);
+      const dragRadius = 1.6; // insan bu mesafeden uzaklaşırsa yatan kediyi de çeker
+      if (dist > dragRadius) {
+        const scale = dragRadius / dist;
+        myMesh.position.x = owner.mesh.position.x + dx * scale;
+        myMesh.position.z = owner.mesh.position.z + dz * scale;
+      }
+    }
+
+    if (downedTimer <= 0) {
+      isDowned = false;
+      myHealth = 40; // kısmi toparlanma
+      myMesh.rotation.z = 0;
+      updateHealthBar();
+      dlog("Kedi toparlandı, can: " + myHealth);
+    }
+  }
+
+  const eventsCol = collection(db, "rooms", ROOM_ID, "events");
+  let eventsReady = false;
+
+  function listenShockEvents() {
+    onSnapshot(eventsCol, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type !== "added") return;
+        if (!eventsReady) return; // ilk yüklemede eski olayları tekrar işleme
+        const data = change.doc.data();
+        if (data.type === "shock" && data.targetId === myPlayerId && myPlayerType === "cat") {
+          myHealth = Math.max(0, myHealth - 15);
+          updateHealthBar();
+          dlog("Şok aldın! Can: " + myHealth);
+          if (myHealth <= 0) goDown();
+        }
+      });
+      eventsReady = true;
+    }, (err) => dlog("EVENTS HATASI: " + err.code + " - " + err.message));
+  }
+
+  document.getElementById("zapBtn").addEventListener("click", () => {
+    const pet = findNearestOfType("cat");
+    if (!pet) { dlog("Yakında kedi yok"); return; }
+    const dist = myMesh.position.distanceTo(pet.mesh.position);
+    if (dist > (myLeashLength + 2)) { dlog("Kedi çok uzakta, şok veremezsin"); return; }
+    addDoc(eventsCol, { type: "shock", targetId: pet.id, ts: serverTimestamp() })
+      .catch(err => dlog("ŞOK HATASI: " + err.code + " - " + err.message));
+  });
 
   let lastSentTime = 0;
   const SEND_INTERVAL = 100;
@@ -891,6 +1350,7 @@
       color: myColor,
       type: myPlayerType,
       leashLength: myLeashLength,
+      health: myHealth,
       x: myMesh.position.x,
       y: myMesh.position.y,
       z: myMesh.position.z,
@@ -940,6 +1400,7 @@
           const mesh = createCharacterMesh(data.type || "human", data.color || 0xff0000);
           scene.add(mesh);
           otherPlayers[id] = {
+            id,
             mesh,
             type: data.type || "human",
             leashLength: data.leashLength || 4,
@@ -1059,14 +1520,16 @@
     document.getElementById("nameEntry").style.display = "none";
     document.getElementById("hud").style.display = "block";
     document.getElementById("chatBox").style.display = "flex";
-    document.getElementById("myName").textContent = myPlayerName + (myPlayerType === "dog" ? " 🐕" : " 🧍");
+    document.getElementById("myName").textContent = myPlayerName + (myPlayerType === "cat" ? " 🐱" : " 🧍");
     if (myPlayerType === "human") {
       document.getElementById("leashControl").style.display = "flex";
+      document.getElementById("zapBtn").style.display = "flex";
     }
     dlog("Katıldın: " + myPlayerName + " (" + myPlayerType + ", ID: " + myPlayerId + ")");
 
     listenOtherPlayers();
     listenChat();
+    listenShockEvents();
     animate();
   }
 
@@ -1081,6 +1544,8 @@
     updateLocalPlayer(delta);
     updateOtherPlayers(delta);
     updateLeash();
+    updateDownedState(delta);
+    updateClock(delta);
     sendMyPosition();
 
     renderer.render(scene, camera);
